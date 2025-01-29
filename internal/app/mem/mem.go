@@ -13,12 +13,12 @@ type Memorizer interface {
 
 type MemStorage struct {
 	Storage map[string]string
-	incId   int64
+	incID   int64
 }
 
 func (m *MemStorage) AddURL(url string) string {
-	m.incId++
-	shortURL := hash.Base62(m.incId)
+	m.incID++
+	shortURL := hash.Base62(m.incID)
 	m.Storage[shortURL] = url
 	return shortURL
 }
