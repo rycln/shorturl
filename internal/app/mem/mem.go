@@ -7,8 +7,8 @@ import (
 )
 
 type Memorizer interface {
-	AddURL(string)
-	GetURL(string) string
+	AddURL(string) string
+	GetURL(string) (string, error)
 }
 
 type MemStorage struct {
@@ -16,13 +16,14 @@ type MemStorage struct {
 	incId   int64
 }
 
-func (m MemStorage) AddURL(url string) string {
+func (m *MemStorage) AddURL(url string) string {
+	m.incId++
 	shortURL := hash.Base62(m.incId)
 	m.Storage[shortURL] = url
 	return shortURL
 }
 
-func (m MemStorage) GetURL(shortURL string) (string, error) {
+func (m *MemStorage) GetURL(shortURL string) (string, error) {
 	_, ok := m.Storage[shortURL]
 	if !ok {
 		return "", errors.New("wrong shortened URL")
