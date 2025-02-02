@@ -2,31 +2,36 @@ package mem
 
 import (
 	"errors"
-
-	"github.com/rycln/shorturl/internal/app/hash"
 )
 
-type Memorizer interface {
-	AddURL(string) string
+type Storager interface {
+	AddURL(string, string) error
 	GetURL(string) (string, error)
 }
 
-type MemStorage struct {
-	Storage map[string]string
-	incID   int64
+type SimpleMemStorage struct {
+	storage map[string]string
 }
 
-func (m *MemStorage) AddURL(url string) string {
-	m.incID++
-	shortURL := hash.Base62(m.incID)
-	m.Storage[shortURL] = url
-	return shortURL
-}
-
-func (m *MemStorage) GetURL(shortURL string) (string, error) {
-	_, ok := m.Storage[shortURL]
-	if !ok {
-		return "", errors.New("wrong shortened URL")
+func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) error {
+	_, ok := sms.storage[shortURL]
+	if ok {
+		return errors.New("collision occured")
 	}
-	return m.Storage[shortURL], nil
+	sms.storage[shortURL] = fullURL
+	return nil
+}
+
+func (sms SimpleMemStorage) GetURL(shortURL string) (string, error) {
+	_, ok := sms.storage[shortURL]
+	if !ok {
+		return "", errors.New("shortened URL does not exist")
+	}
+	return sms.storage[shortURL], nil
+}
+
+func NewSimpleMemStorage() SimpleMemStorage {
+	return SimpleMemStorage{
+		storage: make(map[string]string),
+	}
 }
