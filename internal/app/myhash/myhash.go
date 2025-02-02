@@ -1,19 +1,17 @@
 package myhash
 
 import (
-	"math/rand"
+	"crypto/md5"
+
+	"github.com/jxskiss/base62"
 )
 
-func Base62() string {
-	s := "012345689abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	num := rand.Int63()
-	if num == 0 {
-		num++
-	}
-	var hashStr string
-	for num > 0 {
-		hashStr = string(s[num%62]) + hashStr
-		num /= 62
-	}
-	return hashStr
+const (
+	shortURLSize = 7
+)
+
+func Base62(url string) string {
+	hash := md5.Sum([]byte(url))
+	encodedHash := base62.Encode([]byte(hash[:]))
+	return string(encodedHash[:shortURLSize])
 }
