@@ -85,3 +85,70 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlerVariables_ReturnURL(t *testing.T) {
+	type want struct {
+		code     int
+		location string
+	}
+	tests := []struct {
+		name          string
+		method        string
+		path          string
+		storeContains map[string]string
+		want          want
+	}{
+		{
+			name:   "Valid test #1",
+			method: http.MethodGet,
+			path:   "/abcd",
+			storeContains: map[string]string{
+				"abcd": "https://practicum.yandex.ru/",
+			},
+			want: want{
+				code:     http.StatusTemporaryRedirect,
+				location: "https://practicum.yandex.ru/",
+			},
+		},
+		{
+			name:   "Wrong method #1",
+			method: http.MethodPost,
+			path:   "/abcd",
+			storeContains: map[string]string{
+				"abcd": "https://practicum.yandex.ru/",
+			},
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			name:   "Short URL does not exist #1",
+			method: http.MethodGet,
+			path:   "/dcba",
+			storeContains: map[string]string{
+				"abcd": "https://practicum.yandex.ru/",
+			},
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, test.path, nil)
+			w := httptest.NewRecorder()
+			store := mem.NewSimpleMemStorage()
+			hv := NewHandlerVariables(store)
+			for shortURL, fullURL := range test.storeContains {
+				hv.store.AddURL(shortURL, fullURL)
+			}
+			hv.ReturnURL(w, request)
+
+			res := w.Result()
+			require.Equal(t, test.want.code, res.StatusCode)
+			if res.StatusCode != http.StatusBadRequest {
+				assert.Equal(t, test.want.location, res.Header.Get("Location"))
+			}
+		})
+	}
+}
