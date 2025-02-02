@@ -19,7 +19,6 @@ func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) {
 		return
 	}
 	sms.storage[shortURL] = fullURL
-	return
 }
 
 func (sms SimpleMemStorage) GetURL(shortURL string) (string, error) {
