@@ -30,7 +30,6 @@ func (hv HandlerVariables) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -51,6 +50,11 @@ func (hv HandlerVariables) ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (hv HandlerVariables) ReturnURL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	shortURL := strings.TrimLeft(r.URL.Path, "/")
 	fullURL, err := hv.store.GetURL(shortURL)
 	if err != nil {
