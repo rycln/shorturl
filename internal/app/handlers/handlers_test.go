@@ -74,9 +74,9 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 			hv.ShortenURL(w, request)
 
 			res := w.Result()
+			defer res.Body.Close()
 			require.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode != http.StatusBadRequest {
-				defer res.Body.Close()
 				resBody, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
 				assert.Contains(t, string(resBody), test.want.resContains)
@@ -145,6 +145,7 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 			hv.ReturnURL(w, request)
 
 			res := w.Result()
+			defer res.Body.Close()
 			require.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode != http.StatusBadRequest {
 				assert.Equal(t, test.want.location, res.Header.Get("Location"))
