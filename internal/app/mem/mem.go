@@ -5,7 +5,7 @@ import (
 )
 
 type Storager interface {
-	AddURL(string, string) error
+	AddURL(string, string)
 	GetURL(string) (string, error)
 }
 
@@ -13,13 +13,13 @@ type SimpleMemStorage struct {
 	storage map[string]string
 }
 
-func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) error {
+func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) {
 	_, ok := sms.storage[shortURL]
 	if ok {
-		return errors.New("collision occured")
+		return
 	}
 	sms.storage[shortURL] = fullURL
-	return nil
+	return
 }
 
 func (sms SimpleMemStorage) GetURL(shortURL string) (string, error) {

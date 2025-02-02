@@ -24,26 +24,27 @@ func NewHandlerVariables(store mem.Storager) HandlerVariables {
 func (hv HandlerVariables) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	if r.URL.Path != "/" {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	_, err = url.ParseRequestURI(string(body))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
-	shortURL := myhash.Base62()
 	fullURL := string(body)
-	err = hv.store.AddURL(shortURL, fullURL)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
+	shortURL := myhash.Base62(fullURL)
+	hv.store.AddURL(shortURL, fullURL)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fmt.Sprintf("http://localhost:8080/%s", shortURL)))
@@ -54,6 +55,7 @@ func (hv HandlerVariables) ReturnURL(w http.ResponseWriter, r *http.Request) {
 	fullURL, err := hv.store.GetURL(shortURL)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	w.Header().Set("Location", fullURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
