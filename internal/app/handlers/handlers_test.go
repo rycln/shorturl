@@ -145,7 +145,7 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 			hv.ReturnURL(w, request)
 
 			res := w.Result()
-			defer res.Body.Close()
+			res.Body.Close()
 			require.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode != http.StatusBadRequest {
 				assert.Equal(t, test.want.location, res.Header.Get("Location"))
