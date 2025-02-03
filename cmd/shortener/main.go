@@ -4,11 +4,14 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/handlers"
 	"github.com/rycln/shorturl/internal/app/mem"
 )
 
 func main() {
+	config.Init()
+
 	store := mem.NewSimpleMemStorage()
 	hv := handlers.NewHandlerVariables(store)
 
@@ -19,7 +22,7 @@ func main() {
 	})
 	webApp.All("/", hv.ShortenURL)
 	webApp.All("/:short", hv.ReturnURL)
-	err := webApp.Listen(":8080")
+	err := webApp.Listen(config.GetServerAddr())
 	if err != nil {
 		panic(err)
 	}
