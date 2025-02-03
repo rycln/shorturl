@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"os"
 )
 
 type cfg struct {
@@ -12,8 +13,15 @@ type cfg struct {
 var values cfg
 
 func Init() {
-	flag.StringVar(&values.serverAddr, "a", ":8080", "address and port to run server")
-	flag.StringVar(&values.shortBaseAddr, "b", "http://localhost:8080", "base address and port for short URL")
+	values.serverAddr = os.Getenv("SERVER_ADDRESS")
+	if values.serverAddr == "" {
+		flag.StringVar(&values.serverAddr, "a", ":8080", "address and port to run server")
+	}
+
+	values.shortBaseAddr = os.Getenv("BASE_URL")
+	if values.shortBaseAddr == "" {
+		flag.StringVar(&values.shortBaseAddr, "b", "http://localhost:8080", "base address and port for short URL")
+	}
 	flag.Parse()
 }
 
