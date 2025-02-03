@@ -9,10 +9,18 @@ type cfg struct {
 	shortBaseAddr string
 }
 
-var Config cfg
+var values cfg
 
 func Init() {
-	flag.StringVar(&Config.serverAddr, "a", ":8080", "address and port to run server")
-	flag.StringVar(&Config.shortBaseAddr, "b", "http://localhost:8080/", "base address and port for short URL")
+	flag.StringVar(&values.serverAddr, "a", ":8080", "address and port to run server")
+	flag.StringVar(&values.shortBaseAddr, "b", "http://localhost:8080/", "base address and port for short URL")
 	flag.Parse()
+}
+
+func GetServerAddr() string {
+	return values.serverAddr
+}
+
+func GetShortBaseAddr() string {
+	return values.shortBaseAddr
 }
