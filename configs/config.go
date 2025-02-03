@@ -13,7 +13,7 @@ var values cfg
 
 func Init() {
 	flag.StringVar(&values.serverAddr, "a", ":8080", "address and port to run server")
-	flag.StringVar(&values.shortBaseAddr, "b", "http://localhost:8080/", "base address and port for short URL")
+	flag.StringVar(&values.shortBaseAddr, "b", "http://localhost:8080", "base address and port for short URL")
 	flag.Parse()
 }
 

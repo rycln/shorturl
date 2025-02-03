@@ -37,9 +37,9 @@ func (hv HandlerVariables) ShortenURL(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/plain")
 	baseAddr := config.GetBaseAddr()
 	if baseAddr == "" {
-		baseAddr = "http://localhost:8080/"
+		baseAddr = "http://localhost:8080"
 	}
-	return c.Status(http.StatusCreated).SendString(baseAddr + shortURL)
+	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
 }
 
 func (hv HandlerVariables) ReturnURL(c *fiber.Ctx) error {
