@@ -35,7 +35,11 @@ func (hv HandlerVariables) ShortenURL(c *fiber.Ctx) error {
 	shortURL := myhash.Base62(fullURL)
 	hv.store.AddURL(shortURL, fullURL)
 	c.Set("Content-Type", "text/plain")
-	return c.Status(http.StatusCreated).SendString(config.GetShortBaseAddr() + shortURL)
+	baseAddr := config.GetBaseAddr()
+	if baseAddr == "" {
+		baseAddr = "http://localhost:8080/"
+	}
+	return c.Status(http.StatusCreated).SendString(baseAddr + shortURL)
 }
 
 func (hv HandlerVariables) ReturnURL(c *fiber.Ctx) error {

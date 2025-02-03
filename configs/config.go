@@ -21,6 +21,6 @@ func GetServerAddr() string {
 	return values.serverAddr
 }
 
-func GetShortBaseAddr() string {
+func GetBaseAddr() string {
 	return values.shortBaseAddr
 }
