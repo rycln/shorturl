@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/rycln/shorturl/internal/app/mem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,19 +47,10 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 			},
 		},
 		{
-			name:   "Wrong path #1",
-			method: http.MethodPost,
-			path:   "/wrong/",
-			body:   "https://practicum.yandex.ru/",
-			want: want{
-				code: http.StatusBadRequest,
-			},
-		},
-		{
 			name:   "Wrong URL #1",
 			method: http.MethodPost,
-			path:   "/wrong/",
-			body:   "https://practicum.yandex.",
+			path:   "/",
+			body:   "practicum",
 			want: want{
 				code: http.StatusBadRequest,
 			},
@@ -66,14 +58,17 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			bodyReader := strings.NewReader(test.body)
-			request := httptest.NewRequest(test.method, test.path, bodyReader)
-			w := httptest.NewRecorder()
+			app := fiber.New()
 			store := mem.NewSimpleMemStorage()
 			hv := NewHandlerVariables(store)
-			hv.ShortenURL(w, request)
+			app.All("/", hv.ShortenURL)
 
-			res := w.Result()
+			bodyReader := strings.NewReader(test.body)
+			request := httptest.NewRequest(test.method, test.path, bodyReader)
+			res, err := app.Test(request, -1)
+			if err != nil {
+				panic(err)
+			}
 			defer res.Body.Close()
 			require.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode != http.StatusBadRequest {
@@ -135,16 +130,18 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.method, test.path, nil)
-			w := httptest.NewRecorder()
+			app := fiber.New()
 			store := mem.NewSimpleMemStorage()
 			hv := NewHandlerVariables(store)
+			app.All("/:short", hv.ReturnURL)
 			for shortURL, fullURL := range test.storeContains {
 				hv.store.AddURL(shortURL, fullURL)
 			}
-			hv.ReturnURL(w, request)
-
-			res := w.Result()
+			request := httptest.NewRequest(test.method, test.path, nil)
+			res, err := app.Test(request, -1)
+			if err != nil {
+				panic(err)
+			}
 			res.Body.Close()
 			require.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode != http.StatusBadRequest {

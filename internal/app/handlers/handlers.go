@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/rycln/shorturl/internal/app/mem"
 	"github.com/rycln/shorturl/internal/app/myhash"
 )
@@ -21,46 +20,34 @@ func NewHandlerVariables(store mem.Storager) HandlerVariables {
 	}
 }
 
-func (hv HandlerVariables) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	_, err = url.ParseRequestURI(string(body))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+func (hv HandlerVariables) ShortenURL(c *fiber.Ctx) error {
+	if c.Method() != http.MethodPost {
+		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	fullURL := string(body)
+	body := string(c.Body())
+	_, err := url.ParseRequestURI(body)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	fullURL := body
 	shortURL := myhash.Base62(fullURL)
 	hv.store.AddURL(shortURL, fullURL)
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fmt.Sprintf("http://localhost:8080/%s", shortURL)))
+	c.Set("Content-Type", "text/plain")
+	return c.Status(http.StatusCreated).SendString(fmt.Sprintf("http://localhost:8080/%s", shortURL))
 }
 
-func (hv HandlerVariables) ReturnURL(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+func (hv HandlerVariables) ReturnURL(c *fiber.Ctx) error {
+	if c.Method() != http.MethodGet {
+		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	shortURL := strings.TrimLeft(r.URL.Path, "/")
+	shortURL := c.Params("short")
 	fullURL, err := hv.store.GetURL(shortURL)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return c.SendStatus(http.StatusBadRequest)
 	}
-	w.Header().Set("Location", fullURL)
-	w.WriteHeader(http.StatusTemporaryRedirect)
+	c.Set("Location", fullURL)
+	return c.SendStatus(http.StatusTemporaryRedirect)
 }
