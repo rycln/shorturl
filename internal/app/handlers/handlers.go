@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
+	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/mem"
 	"github.com/rycln/shorturl/internal/app/myhash"
 )
@@ -35,7 +35,7 @@ func (hv HandlerVariables) ShortenURL(c *fiber.Ctx) error {
 	shortURL := myhash.Base62(fullURL)
 	hv.store.AddURL(shortURL, fullURL)
 	c.Set("Content-Type", "text/plain")
-	return c.Status(http.StatusCreated).SendString(fmt.Sprintf("http://localhost:8080/%s", shortURL))
+	return c.Status(http.StatusCreated).SendString(config.GetShortBaseAddr() + shortURL)
 }
 
 func (hv HandlerVariables) ReturnURL(c *fiber.Ctx) error {
