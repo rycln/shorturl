@@ -1,28 +1,20 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/gofiber/fiber/v2"
 	config "github.com/rycln/shorturl/configs"
-	"github.com/rycln/shorturl/internal/app/handlers"
-	"github.com/rycln/shorturl/internal/app/mem"
+	"github.com/rycln/shorturl/internal/app/server"
+	"github.com/rycln/shorturl/internal/app/storage"
 )
 
 func main() {
-	config.Init()
+	app := fiber.New()
+	storage := storage.NewSimpleMemStorage()
+	config := config.NewCfg()
+	sa := server.NewServerArgs(storage, config)
+	server.Set(app, sa)
 
-	store := mem.NewSimpleMemStorage()
-	hv := handlers.NewHandlerVariables(store)
-
-	webApp := fiber.New()
-	webApp.Use(func(c *fiber.Ctx) error {
-		c.Status(http.StatusBadRequest)
-		return c.Next()
-	})
-	webApp.All("/", hv.ShortenURL)
-	webApp.All("/:short", hv.ReturnURL)
-	err := webApp.Listen(config.GetServerAddr())
+	err := app.Listen(config.GetServerAddr())
 	if err != nil {
 		panic(err)
 	}

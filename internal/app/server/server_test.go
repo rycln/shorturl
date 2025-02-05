@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"io"
@@ -8,12 +8,19 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/rycln/shorturl/internal/app/mem"
+	config "github.com/rycln/shorturl/configs"
+	"github.com/rycln/shorturl/internal/app/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHandlerVariables_ShortenURL(t *testing.T) {
+	app := fiber.New()
+	storage := storage.NewSimpleMemStorage()
+	config := config.NewTestCfg()
+	sa := NewServerArgs(storage, config)
+	Set(app, sa)
+
 	type want struct {
 		code        int
 		resContains string
@@ -58,18 +65,15 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			store := mem.NewSimpleMemStorage()
-			hv := NewHandlerVariables(store)
-			app.All("/", hv.ShortenURL)
-
 			bodyReader := strings.NewReader(test.body)
 			request := httptest.NewRequest(test.method, test.path, bodyReader)
+
 			res, err := app.Test(request, -1)
 			if err != nil {
 				panic(err)
 			}
 			defer res.Body.Close()
+
 			require.Equal(t, test.want.code, res.StatusCode)
 			if res.StatusCode != http.StatusBadRequest {
 				resBody, err := io.ReadAll(res.Body)
@@ -82,6 +86,12 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 }
 
 func TestHandlerVariables_ReturnURL(t *testing.T) {
+	app := fiber.New()
+	storage := storage.NewSimpleMemStorage()
+	config := config.NewTestCfg()
+	sa := NewServerArgs(storage, config)
+	Set(app, sa)
+
 	type want struct {
 		code     int
 		location string
@@ -130,12 +140,8 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			store := mem.NewSimpleMemStorage()
-			hv := NewHandlerVariables(store)
-			app.All("/:short", hv.ReturnURL)
 			for shortURL, fullURL := range test.storeContains {
-				hv.store.AddURL(shortURL, fullURL)
+				sa.storage.AddURL(shortURL, fullURL)
 			}
 			request := httptest.NewRequest(test.method, test.path, nil)
 			res, err := app.Test(request, -1)
