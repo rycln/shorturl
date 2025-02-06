@@ -1,8 +1,11 @@
 package config
 
+//"flag"
+
 import (
 	"flag"
-	"os"
+
+	"github.com/caarlos0/env/v11"
 )
 
 const (
@@ -11,8 +14,8 @@ const (
 )
 
 type Cfg struct {
-	serverAddr    string
-	shortBaseAddr string
+	ServerAddr    string `env:"SERVER_ADDRESS"`
+	ShortBaseAddr string `env:"BASE_URL"`
 }
 
 func NewCfg() *Cfg {
@@ -20,27 +23,22 @@ func NewCfg() *Cfg {
 }
 
 func (cfg *Cfg) Init() {
-	flag.StringVar(&cfg.serverAddr, "a", defaultServerAddr, "address and port to run server")
-	flag.StringVar(&cfg.shortBaseAddr, "b", defaultBaseAddr, "base address and port for short URL")
+	flag.StringVar(&cfg.ServerAddr, "a", defaultServerAddr, "address and port to run server")
+	flag.StringVar(&cfg.ShortBaseAddr, "b", defaultBaseAddr, "base address and port for short URL")
 	flag.Parse()
 
-	var envAddr string
-	envAddr = os.Getenv("SERVER_ADDRESS")
-	if envAddr != "" {
-		cfg.serverAddr = envAddr
-	}
-	envAddr = os.Getenv("BASE_URL")
-	if envAddr != "" {
-		cfg.shortBaseAddr = envAddr
+	err := env.Parse(cfg)
+	if err != nil {
+		panic(err)
 	}
 }
 
 func (cfg *Cfg) GetServerAddr() string {
-	return cfg.serverAddr
+	return cfg.ServerAddr
 }
 
 func (cfg *Cfg) GetBaseAddr() string {
-	return cfg.shortBaseAddr
+	return cfg.ShortBaseAddr
 }
 
 type TestCfg Cfg
@@ -50,14 +48,14 @@ func NewTestCfg() *TestCfg {
 }
 
 func (testCfg *TestCfg) Init() {
-	testCfg.serverAddr = defaultServerAddr
-	testCfg.shortBaseAddr = defaultBaseAddr
+	testCfg.ServerAddr = defaultServerAddr
+	testCfg.ShortBaseAddr = defaultBaseAddr
 }
 
 func (testCfg *TestCfg) GetServerAddr() string {
-	return testCfg.serverAddr
+	return testCfg.ServerAddr
 }
 
 func (testCfg *TestCfg) GetBaseAddr() string {
-	return testCfg.shortBaseAddr
+	return testCfg.ShortBaseAddr
 }
