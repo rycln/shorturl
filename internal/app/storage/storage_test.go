@@ -119,7 +119,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 			storage := NewSimpleMemStorage()
 			ts := NewTestStorage(storage)
 
-			if assert.Equal(t, len(test.shortURLs), len(test.fullURLs)) {
+			if assert.Equal(t, len(test.shortURLs), len(test.fullURLs), "wrong tests") {
 				for i := range test.shortURLs {
 					ts.ts.AddURL(test.shortURLs[i], test.fullURLs[i])
 				}
