@@ -1,7 +1,5 @@
 package config
 
-//"flag"
-
 import (
 	"flag"
 
@@ -9,8 +7,8 @@ import (
 )
 
 const (
-	defaultServerAddr = ":8080"
-	defaultBaseAddr   = "http://localhost:8080"
+	DefaultServerAddr = ":8080"
+	DefaultBaseAddr   = "http://localhost:8080"
 )
 
 type Cfg struct {
@@ -21,8 +19,8 @@ type Cfg struct {
 func NewCfg() *Cfg {
 	cfg := &Cfg{}
 
-	flag.StringVar(&cfg.ServerAddr, "a", defaultServerAddr, "address and port to run server")
-	flag.StringVar(&cfg.ShortBaseAddr, "b", defaultBaseAddr, "base address and port for short URL")
+	flag.StringVar(&cfg.ServerAddr, "a", DefaultServerAddr, "address and port to run server")
+	flag.StringVar(&cfg.ShortBaseAddr, "b", DefaultBaseAddr, "base address and port for short URL")
 	flag.Parse()
 
 	err := env.Parse(cfg)
@@ -39,21 +37,4 @@ func (cfg *Cfg) GetServerAddr() string {
 
 func (cfg *Cfg) GetBaseAddr() string {
 	return cfg.ShortBaseAddr
-}
-
-type TestCfg Cfg
-
-func NewTestCfg() *TestCfg {
-	testCfg := &TestCfg{}
-	testCfg.ServerAddr = defaultServerAddr
-	testCfg.ShortBaseAddr = defaultBaseAddr
-	return testCfg
-}
-
-func (testCfg *TestCfg) GetServerAddr() string {
-	return testCfg.ServerAddr
-}
-
-func (testCfg *TestCfg) GetBaseAddr() string {
-	return testCfg.ShortBaseAddr
 }

@@ -17,7 +17,10 @@ import (
 func TestHandlerVariables_ShortenURL(t *testing.T) {
 	app := fiber.New()
 	storage := storage.NewSimpleMemStorage()
-	config := config.NewTestCfg()
+	config := &config.Cfg{
+		ServerAddr:    config.DefaultServerAddr,
+		ShortBaseAddr: config.DefaultBaseAddr,
+	}
 	sa := NewServerArgs(storage, config)
 	Set(app, sa)
 
@@ -88,7 +91,10 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 func TestHandlerVariables_ReturnURL(t *testing.T) {
 	app := fiber.New()
 	storage := storage.NewSimpleMemStorage()
-	config := config.NewTestCfg()
+	config := &config.Cfg{
+		ServerAddr:    config.DefaultServerAddr,
+		ShortBaseAddr: config.DefaultBaseAddr,
+	}
 	sa := NewServerArgs(storage, config)
 	Set(app, sa)
 
