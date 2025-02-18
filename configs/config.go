@@ -19,10 +19,8 @@ type Cfg struct {
 }
 
 func NewCfg() *Cfg {
-	return &Cfg{}
-}
+	cfg := &Cfg{}
 
-func (cfg *Cfg) Init() {
 	flag.StringVar(&cfg.ServerAddr, "a", defaultServerAddr, "address and port to run server")
 	flag.StringVar(&cfg.ShortBaseAddr, "b", defaultBaseAddr, "base address and port for short URL")
 	flag.Parse()
@@ -31,6 +29,8 @@ func (cfg *Cfg) Init() {
 	if err != nil {
 		panic(err)
 	}
+
+	return cfg
 }
 
 func (cfg *Cfg) GetServerAddr() string {
@@ -44,12 +44,10 @@ func (cfg *Cfg) GetBaseAddr() string {
 type TestCfg Cfg
 
 func NewTestCfg() *TestCfg {
-	return &TestCfg{}
-}
-
-func (testCfg *TestCfg) Init() {
+	testCfg := &TestCfg{}
 	testCfg.ServerAddr = defaultServerAddr
 	testCfg.ShortBaseAddr = defaultBaseAddr
+	return testCfg
 }
 
 func (testCfg *TestCfg) GetServerAddr() string {

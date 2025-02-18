@@ -9,7 +9,6 @@ import (
 )
 
 type Configer interface {
-	Init()
 	GetBaseAddr() string
 }
 
@@ -64,8 +63,6 @@ func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 }
 
 func Set(app *fiber.App, sa *ServerArgs) {
-	sa.config.Init()
-
 	app.Use(func(c *fiber.Ctx) error {
 		c.Status(http.StatusBadRequest)
 		return c.Next()
