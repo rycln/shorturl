@@ -19,8 +19,8 @@ type Cfg struct {
 func NewCfg() *Cfg {
 	cfg := &Cfg{}
 
-	flag.StringVar(&cfg.ServerAddr, "a", DefaultServerAddr, "address and port to run server")
-	flag.StringVar(&cfg.ShortBaseAddr, "b", DefaultBaseAddr, "base address and port for short URL")
+	flag.StringVar(&cfg.ServerAddr, "a", DefaultServerAddr, "Address and port to start the server (environment variable SERVER_ADDRESS has higher priority)")
+	flag.StringVar(&cfg.ShortBaseAddr, "b", DefaultBaseAddr, "Base address and port for short URL (environment variable BASE_URL has higher priority)")
 	flag.Parse()
 
 	err := env.Parse(cfg)

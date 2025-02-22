@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -46,7 +47,7 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 	fullURL := body
 	shortURL := myhash.Base62(fullURL)
 	sa.storage.AddURL(shortURL, fullURL)
-	c.Set("Content-Type", "text/plain")
+	c.Type("text")
 	baseAddr := sa.config.GetBaseAddr()
 	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
 }
@@ -65,6 +66,49 @@ func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 	return c.SendStatus(http.StatusTemporaryRedirect)
 }
 
+type apiReq struct {
+	URL string `json:"url"`
+}
+
+type apiRes struct {
+	Result string `json:"result"`
+}
+
+func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
+	if c.Method() != http.MethodPost {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	if !c.Is("json") {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	var req apiReq
+	err := json.Unmarshal(c.Body(), &req)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	_, err = url.ParseRequestURI(req.URL)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	fullURL := req.URL
+	shortURL := myhash.Base62(fullURL)
+	sa.storage.AddURL(shortURL, fullURL)
+
+	var res apiRes
+	baseAddr := sa.config.GetBaseAddr()
+	res.Result = baseAddr + "/" + shortURL
+	resBody, err := json.Marshal(&res)
+	if err != nil {
+		c.SendStatus(http.StatusInternalServerError)
+	}
+	c.Type("json")
+	return c.Status(http.StatusCreated).Send(resBody)
+}
+
 func Set(app *fiber.App, sa *ServerArgs) {
 	app.Use(func(c *fiber.Ctx) error {
 		c.Status(http.StatusBadRequest)
@@ -79,4 +123,5 @@ func Set(app *fiber.App, sa *ServerArgs) {
 
 	app.All("/", sa.ShortenURL)
 	app.All("/:short", sa.ReturnURL)
+	app.All("/api/shorten", sa.ShortenAPI)
 }

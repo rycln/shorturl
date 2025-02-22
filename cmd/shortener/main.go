@@ -13,7 +13,7 @@ import (
 func main() {
 	err := logger.LogInit()
 	if err != nil {
-		log.Fatalf("Can't initialize logger: %v", err)
+		log.Fatalf("Can't initialize the logger: %v", err)
 	}
 	defer logger.Log.Sync()
 
@@ -25,6 +25,6 @@ func main() {
 
 	err = app.Listen(config.GetServerAddr())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Can't start the server: %v", err)
 	}
 }
