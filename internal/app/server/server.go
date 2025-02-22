@@ -47,7 +47,7 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 	fullURL := body
 	shortURL := myhash.Base62(fullURL)
 	sa.storage.AddURL(shortURL, fullURL)
-	c.Type("text")
+	c.Set("Content-Type", "text/plain")
 	baseAddr := sa.config.GetBaseAddr()
 	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
 }
@@ -105,7 +105,7 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	if err != nil {
 		c.SendStatus(http.StatusInternalServerError)
 	}
-	c.Type("json")
+	c.Set("Content-Type", "application/json")
 	return c.Status(http.StatusCreated).Send(resBody)
 }
 
