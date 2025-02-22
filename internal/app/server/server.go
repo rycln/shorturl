@@ -4,12 +4,14 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
+	"go.uber.org/zap/zapcore"
 )
 
 type Configer interface {
-	Init()
 	GetBaseAddr() string
 }
 
@@ -64,12 +66,16 @@ func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 }
 
 func Set(app *fiber.App, sa *ServerArgs) {
-	sa.config.Init()
-
 	app.Use(func(c *fiber.Ctx) error {
 		c.Status(http.StatusBadRequest)
 		return c.Next()
 	})
+
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: logger.Log,
+		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
+		Levels: []zapcore.Level{zapcore.InfoLevel},
+	}))
 
 	app.All("/", sa.ShortenURL)
 	app.All("/:short", sa.ReturnURL)
