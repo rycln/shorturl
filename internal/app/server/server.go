@@ -1,15 +1,19 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
+	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
+	"go.uber.org/zap/zapcore"
 )
 
 type Configer interface {
-	Init()
 	GetBaseAddr() string
 }
 
@@ -31,10 +35,6 @@ func NewServerArgs(storage Storager, config Configer) *ServerArgs {
 }
 
 func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
-	if c.Method() != http.MethodPost {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
 	body := string(c.Body())
 	_, err := url.ParseRequestURI(body)
 	if err != nil {
@@ -50,10 +50,6 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 }
 
 func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
-	if c.Method() != http.MethodGet {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
 	shortURL := c.Params("short")
 	fullURL, err := sa.storage.GetURL(shortURL)
 	if err != nil {
@@ -63,14 +59,61 @@ func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 	return c.SendStatus(http.StatusTemporaryRedirect)
 }
 
+type apiReq struct {
+	URL string `json:"url"`
+}
+
+type apiRes struct {
+	Result string `json:"result"`
+}
+
+func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
+	if !c.Is("json") {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	var req apiReq
+	err := json.Unmarshal(c.Body(), &req)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	_, err = url.ParseRequestURI(req.URL)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	fullURL := req.URL
+	shortURL := myhash.Base62(fullURL)
+	sa.storage.AddURL(shortURL, fullURL)
+
+	var res apiRes
+	baseAddr := sa.config.GetBaseAddr()
+	res.Result = baseAddr + "/" + shortURL
+	resBody, err := json.Marshal(&res)
+	if err != nil {
+		c.SendStatus(http.StatusInternalServerError)
+	}
+	c.Set("Content-Type", "application/json")
+	return c.Status(http.StatusCreated).Send(resBody)
+}
+
 func Set(app *fiber.App, sa *ServerArgs) {
-	sa.config.Init()
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: logger.Log,
+		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
+		Levels: []zapcore.Level{zapcore.InfoLevel},
+	}))
+
+	app.Post("/api/shorten", sa.ShortenAPI)
+	app.Get("/:short", sa.ReturnURL)
+	app.Post("/", sa.ShortenURL)
+
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
 
 	app.Use(func(c *fiber.Ctx) error {
-		c.Status(http.StatusBadRequest)
-		return c.Next()
+		return c.SendStatus(http.StatusBadRequest)
 	})
-
-	app.All("/", sa.ShortenURL)
-	app.All("/:short", sa.ReturnURL)
 }
