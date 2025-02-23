@@ -66,6 +66,15 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 		},
+		{
+			name:   "Wrong path #1",
+			method: http.MethodPost,
+			path:   "/ab/cd",
+			body:   "https://practicum.yandex.ru/",
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -137,6 +146,17 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 			name:   "Short URL does not exist #1",
 			method: http.MethodGet,
 			path:   "/dcba",
+			storeContains: map[string]string{
+				"abcd": "https://practicum.yandex.ru/",
+			},
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			name:   "Wrong path #1",
+			method: http.MethodGet,
+			path:   "/dcba/abcd",
 			storeContains: map[string]string{
 				"abcd": "https://practicum.yandex.ru/",
 			},
@@ -232,6 +252,16 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			method: http.MethodPost,
 			path:   "/api/shorten",
 			body:   []byte(`{"url:"https://practicum.yandex.ru/"}`),
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:   "Wrong path #1",
+			method: http.MethodPost,
+			path:   "/api/shorten/bad",
+			body:   []byte(`{"url":"https://practicum.yandex.ru/"}`),
 			want: want{
 				code:        http.StatusBadRequest,
 				contentType: "application/json",
