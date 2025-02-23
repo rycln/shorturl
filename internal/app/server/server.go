@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
 	"go.uber.org/zap/zapcore"
@@ -107,6 +108,10 @@ func Set(app *fiber.App, sa *ServerArgs) {
 	app.Post("/api/shorten", sa.ShortenAPI)
 	app.Get("/:short", sa.ReturnURL)
 	app.Post("/", sa.ShortenURL)
+
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
