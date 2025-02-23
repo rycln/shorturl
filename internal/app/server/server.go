@@ -34,10 +34,6 @@ func NewServerArgs(storage Storager, config Configer) *ServerArgs {
 }
 
 func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
-	if c.Method() != http.MethodPost {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
 	body := string(c.Body())
 	_, err := url.ParseRequestURI(body)
 	if err != nil {
@@ -53,10 +49,6 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 }
 
 func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
-	if c.Method() != http.MethodGet {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
 	shortURL := c.Params("short")
 	fullURL, err := sa.storage.GetURL(shortURL)
 	if err != nil {
@@ -75,10 +67,6 @@ type apiRes struct {
 }
 
 func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
-	if c.Method() != http.MethodPost {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
 	if !c.Is("json") {
 		return c.SendStatus(http.StatusBadRequest)
 	}
@@ -110,18 +98,17 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 }
 
 func Set(app *fiber.App, sa *ServerArgs) {
-	app.Use(func(c *fiber.Ctx) error {
-		c.Status(http.StatusBadRequest)
-		return c.Next()
-	})
-
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Log,
 		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
 
-	app.All("/", sa.ShortenURL)
-	app.All("/:short", sa.ReturnURL)
-	app.All("/api/shorten", sa.ShortenAPI)
+	app.Post("/api/shorten", sa.ShortenAPI)
+	app.Get("/:short", sa.ReturnURL)
+	app.Post("/", sa.ShortenURL)
+
+	app.Use(func(c *fiber.Ctx) error {
+		return c.SendStatus(http.StatusBadRequest)
+	})
 }
