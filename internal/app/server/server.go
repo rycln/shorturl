@@ -24,7 +24,7 @@ type storager interface {
 }
 
 type fileWriter interface {
-	WriteIntoFile(*storage.StoredURL) error
+	WriteInto(*storage.StoredURL) error
 }
 
 type ServerArgs struct {
@@ -53,7 +53,10 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 	ok := sa.storage.AddURL(shortURL, fullURL)
 	if ok {
 		surl := storage.NewStoredURL(shortURL, fullURL)
-		sa.fileWriter.WriteIntoFile(surl)
+		err := sa.fileWriter.WriteInto(surl)
+		if err != nil {
+			return c.SendStatus(http.StatusInternalServerError)
+		}
 	}
 
 	c.Set("Content-Type", "text/plain")
@@ -100,7 +103,10 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	ok := sa.storage.AddURL(shortURL, fullURL)
 	if ok {
 		surl := storage.NewStoredURL(shortURL, fullURL)
-		sa.fileWriter.WriteIntoFile(surl)
+		err := sa.fileWriter.WriteInto(surl)
+		if err != nil {
+			return c.SendStatus(http.StatusInternalServerError)
+		}
 	}
 
 	var res apiRes

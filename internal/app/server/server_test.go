@@ -2,8 +2,8 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,20 +16,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHandlerVariables_ShortenURL(t *testing.T) {
-	fe, err := storage.NewFileEncoder("123")
-	if err != nil {
-		log.Fatalf("Can't open the file: %v", err)
-	}
-	defer fe.Close()
+type testEncoder struct {
+	buf     *bytes.Buffer
+	encoder *json.Encoder
+}
 
-	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
+func newTestEncoder() *testEncoder {
+	var b []byte
+	buf := bytes.NewBuffer(b)
+	return &testEncoder{
+		buf:     buf,
+		encoder: json.NewEncoder(buf),
+	}
+}
+
+func (te *testEncoder) WriteInto(surl *storage.StoredURL) error {
+	return te.encoder.Encode(&surl)
+}
+
+func TestHandlerVariables_ShortenURL(t *testing.T) {
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
-	sa := NewServerArgs(storage, config, fe)
+
+	te := newTestEncoder()
+
+	app := fiber.New()
+	storage := storage.NewSimpleMemStorage()
+	sa := NewServerArgs(storage, config, te)
 	Set(app, sa)
 
 	type want struct {
@@ -106,19 +121,16 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 }
 
 func TestHandlerVariables_ReturnURL(t *testing.T) {
-	fe, err := storage.NewFileEncoder("123")
-	if err != nil {
-		log.Fatalf("Can't open the file: %v", err)
-	}
-	defer fe.Close()
-
-	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
-	sa := NewServerArgs(storage, config, fe)
+
+	te := newTestEncoder()
+
+	app := fiber.New()
+	storage := storage.NewSimpleMemStorage()
+	sa := NewServerArgs(storage, config, te)
 	Set(app, sa)
 
 	type want struct {
@@ -198,19 +210,16 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 }
 
 func TestServerArgs_ShortenAPI(t *testing.T) {
-	fe, err := storage.NewFileEncoder("123")
-	if err != nil {
-		log.Fatalf("Can't open the file: %v", err)
-	}
-	defer fe.Close()
-
-	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
-	sa := NewServerArgs(storage, config, fe)
+
+	te := newTestEncoder()
+
+	app := fiber.New()
+	storage := storage.NewSimpleMemStorage()
+	sa := NewServerArgs(storage, config, te)
 	Set(app, sa)
 
 	type want struct {

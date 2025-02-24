@@ -44,7 +44,7 @@ func (fe *FileEncoder) Close() error {
 	return fe.file.Close()
 }
 
-func (fe *FileEncoder) WriteIntoFile(surl *StoredURL) error {
+func (fe *FileEncoder) WriteInto(surl *StoredURL) error {
 	return fe.encoder.Encode(&surl)
 }
 
