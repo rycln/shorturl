@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 
 	"github.com/google/uuid"
@@ -77,7 +78,10 @@ func (fd *FileDecoder) RestoreStorage(s storager) error {
 		surl := &StoredURL{}
 		err := fd.decoder.Decode(&surl)
 		if err != nil {
-			return err
+			if err != io.EOF {
+				return err
+			}
+			return nil
 		}
 		s.AddURL(surl.ShortURL, surl.FullURL)
 	}

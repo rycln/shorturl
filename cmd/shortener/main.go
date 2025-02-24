@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -27,9 +26,7 @@ func main() {
 	}
 	err = fd.RestoreStorage(strg)
 	if err != nil {
-		if err != io.EOF {
-			log.Fatalf("Can't restore from file: %v", err)
-		}
+		log.Fatalf("Can't restore from file: %v", err)
 	}
 	fd.Close()
 
