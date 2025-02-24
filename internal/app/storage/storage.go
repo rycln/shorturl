@@ -14,12 +14,13 @@ func NewSimpleMemStorage() *SimpleMemStorage {
 	}
 }
 
-func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) {
+func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) bool {
 	_, ok := sms.storage[shortURL]
 	if ok {
-		return
+		return false
 	}
 	sms.storage[shortURL] = fullURL
+	return true
 }
 
 func (sms SimpleMemStorage) GetURL(shortURL string) (string, error) {
