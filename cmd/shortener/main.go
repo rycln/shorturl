@@ -20,14 +20,14 @@ func main() {
 	cfg := config.NewCfg()
 	strg := storage.NewSimpleMemStorage()
 
-	fd, err := storage.NewFileDecoder("123")
+	fd, err := storage.NewFileDecoder(cfg.GetFilePath())
 	if err != nil {
 		log.Fatalf("Can't open the file: %v", err)
 	}
 	fd.RestoreStorage(strg)
 	fd.Close()
 
-	fe, err := storage.NewFileEncoder("123")
+	fe, err := storage.NewFileEncoder(cfg.GetFilePath())
 	if err != nil {
 		log.Fatalf("Can't open the file: %v", err)
 	}
