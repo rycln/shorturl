@@ -10,27 +10,34 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
+	"github.com/rycln/shorturl/internal/app/storage"
 	"go.uber.org/zap/zapcore"
 )
 
-type Configer interface {
+type configer interface {
 	GetBaseAddr() string
 }
 
-type Storager interface {
-	AddURL(string, string)
+type storager interface {
+	AddURL(string, string) bool
 	GetURL(string) (string, error)
 }
 
-type ServerArgs struct {
-	storage Storager
-	config  Configer
+type fileWriter interface {
+	WriteIntoFile(*storage.StoredURL) error
 }
 
-func NewServerArgs(storage Storager, config Configer) *ServerArgs {
+type ServerArgs struct {
+	storage    storager
+	config     configer
+	fileWriter fileWriter
+}
+
+func NewServerArgs(strg storager, cfg configer, fw fileWriter) *ServerArgs {
 	return &ServerArgs{
-		storage: storage,
-		config:  config,
+		storage:    strg,
+		config:     cfg,
+		fileWriter: fw,
 	}
 }
 
@@ -43,7 +50,12 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 
 	fullURL := body
 	shortURL := myhash.Base62(fullURL)
-	sa.storage.AddURL(shortURL, fullURL)
+	ok := sa.storage.AddURL(shortURL, fullURL)
+	if ok {
+		surl := storage.NewStoredURL(shortURL, fullURL)
+		sa.fileWriter.WriteIntoFile(surl)
+	}
+
 	c.Set("Content-Type", "text/plain")
 	baseAddr := sa.config.GetBaseAddr()
 	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
@@ -85,7 +97,11 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 
 	fullURL := req.URL
 	shortURL := myhash.Base62(fullURL)
-	sa.storage.AddURL(shortURL, fullURL)
+	ok := sa.storage.AddURL(shortURL, fullURL)
+	if ok {
+		surl := storage.NewStoredURL(shortURL, fullURL)
+		sa.fileWriter.WriteIntoFile(surl)
+	}
 
 	var res apiRes
 	baseAddr := sa.config.GetBaseAddr()

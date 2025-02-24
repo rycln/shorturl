@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,13 +17,19 @@ import (
 )
 
 func TestHandlerVariables_ShortenURL(t *testing.T) {
+	fe, err := storage.NewFileEncoder("123")
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fe.Close()
+
 	app := fiber.New()
 	storage := storage.NewSimpleMemStorage()
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
-	sa := NewServerArgs(storage, config)
+	sa := NewServerArgs(storage, config, fe)
 	Set(app, sa)
 
 	type want struct {
@@ -99,13 +106,19 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 }
 
 func TestHandlerVariables_ReturnURL(t *testing.T) {
+	fe, err := storage.NewFileEncoder("123")
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fe.Close()
+
 	app := fiber.New()
 	storage := storage.NewSimpleMemStorage()
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
-	sa := NewServerArgs(storage, config)
+	sa := NewServerArgs(storage, config, fe)
 	Set(app, sa)
 
 	type want struct {
@@ -185,13 +198,19 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 }
 
 func TestServerArgs_ShortenAPI(t *testing.T) {
+	fe, err := storage.NewFileEncoder("123")
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fe.Close()
+
 	app := fiber.New()
 	storage := storage.NewSimpleMemStorage()
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
-	sa := NewServerArgs(storage, config)
+	sa := NewServerArgs(storage, config, fe)
 	Set(app, sa)
 
 	type want struct {

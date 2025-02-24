@@ -7,7 +7,7 @@ import (
 )
 
 type testStorager interface {
-	AddURL(string, string)
+	AddURL(string, string) bool
 	GetURL(string) (string, error)
 }
 

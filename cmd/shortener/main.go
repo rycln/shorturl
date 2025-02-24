@@ -17,13 +17,27 @@ func main() {
 	}
 	defer logger.Log.Sync()
 
+	cfg := config.NewCfg()
+	strg := storage.NewSimpleMemStorage()
+
+	fd, err := storage.NewFileDecoder("123")
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	fd.RestoreStorage(strg)
+	fd.Close()
+
+	fe, err := storage.NewFileEncoder("123")
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fe.Close()
+
 	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
-	config := config.NewCfg()
-	sa := server.NewServerArgs(storage, config)
+	sa := server.NewServerArgs(strg, cfg, fe)
 	server.Set(app, sa)
 
-	err = app.Listen(config.GetServerAddr())
+	err = app.Listen(cfg.GetServerAddr())
 	if err != nil {
 		log.Fatalf("Can't start the server: %v", err)
 	}
