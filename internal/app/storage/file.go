@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 
 	"github.com/google/uuid"
@@ -74,17 +73,12 @@ type storager interface {
 }
 
 func (fd *FileDecoder) RestoreStorage(s storager) error {
-	var err error
-	for err == nil {
+	for {
 		surl := &StoredURL{}
-		err = fd.decoder.Decode(&surl)
+		err := fd.decoder.Decode(&surl)
 		if err != nil {
 			return err
 		}
 		s.AddURL(surl.ShortURL, surl.FullURL)
 	}
-	if err != io.EOF {
-		return err
-	}
-	return nil
 }

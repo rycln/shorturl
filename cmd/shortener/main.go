@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,7 +25,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Can't open the file: %v", err)
 	}
-	fd.RestoreStorage(strg)
+	err = fd.RestoreStorage(strg)
+	if err != nil {
+		if err != io.EOF {
+			log.Fatalf("Can't restore from file: %v", err)
+		}
+	}
 	fd.Close()
 
 	fe, err := storage.NewFileEncoder(cfg.GetFilePath())
