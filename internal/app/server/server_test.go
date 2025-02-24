@@ -51,6 +51,7 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 		code        int
 		resContains string
 		contentType string
+		bufContains string
 	}
 	tests := []struct {
 		name   string
@@ -68,6 +69,7 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 				code:        http.StatusCreated,
 				resContains: "http://localhost:8080/",
 				contentType: "text/plain",
+				bufContains: "https://practicum.yandex.ru/",
 			},
 		},
 		{
@@ -115,6 +117,7 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 				require.NoError(t, err)
 				assert.Contains(t, string(resBody), test.want.resContains)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+				assert.Contains(t, te.buf.String(), test.want.bufContains)
 			}
 		})
 	}
@@ -226,6 +229,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 		code        int
 		resContains string
 		contentType string
+		bufContains string
 	}
 	tests := []struct {
 		name   string
@@ -243,6 +247,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 				code:        http.StatusCreated,
 				resContains: "http://localhost:8080/",
 				contentType: "application/json",
+				bufContains: "https://practicum.yandex.ru/",
 			},
 		},
 		{
@@ -314,6 +319,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 				require.NoError(t, err)
 				assert.Contains(t, string(resBody), test.want.resContains)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+				assert.Contains(t, te.buf.String(), test.want.bufContains)
 			}
 		})
 	}
