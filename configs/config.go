@@ -1,7 +1,5 @@
 package config
 
-//"flag"
-
 import (
 	"flag"
 
@@ -9,28 +7,31 @@ import (
 )
 
 const (
-	defaultServerAddr = ":8080"
-	defaultBaseAddr   = "http://localhost:8080"
+	DefaultServerAddr      = ":8080"
+	DefaultBaseAddr        = "http://localhost:8080"
+	DefaultStorageFileName = "urls"
 )
 
 type Cfg struct {
-	ServerAddr    string `env:"SERVER_ADDRESS"`
-	ShortBaseAddr string `env:"BASE_URL"`
+	ServerAddr      string `env:"SERVER_ADDRESS"`
+	ShortBaseAddr   string `env:"BASE_URL"`
+	StorageFilePath string `env:"FILE_STORAGE_PATH"`
 }
 
 func NewCfg() *Cfg {
-	return &Cfg{}
-}
+	cfg := &Cfg{}
 
-func (cfg *Cfg) Init() {
-	flag.StringVar(&cfg.ServerAddr, "a", defaultServerAddr, "address and port to run server")
-	flag.StringVar(&cfg.ShortBaseAddr, "b", defaultBaseAddr, "base address and port for short URL")
+	flag.StringVar(&cfg.ServerAddr, "a", DefaultServerAddr, "Address and port to start the server (environment variable SERVER_ADDRESS has higher priority)")
+	flag.StringVar(&cfg.ShortBaseAddr, "b", DefaultBaseAddr, "Base address and port for short URL (environment variable BASE_URL has higher priority)")
+	flag.StringVar(&cfg.StorageFilePath, "f", DefaultStorageFileName, "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
 	flag.Parse()
 
 	err := env.Parse(cfg)
 	if err != nil {
 		panic(err)
 	}
+
+	return cfg
 }
 
 func (cfg *Cfg) GetServerAddr() string {
@@ -41,21 +42,6 @@ func (cfg *Cfg) GetBaseAddr() string {
 	return cfg.ShortBaseAddr
 }
 
-type TestCfg Cfg
-
-func NewTestCfg() *TestCfg {
-	return &TestCfg{}
-}
-
-func (testCfg *TestCfg) Init() {
-	testCfg.ServerAddr = defaultServerAddr
-	testCfg.ShortBaseAddr = defaultBaseAddr
-}
-
-func (testCfg *TestCfg) GetServerAddr() string {
-	return testCfg.ServerAddr
-}
-
-func (testCfg *TestCfg) GetBaseAddr() string {
-	return testCfg.ShortBaseAddr
+func (cfg *Cfg) GetFilePath() string {
+	return cfg.StorageFilePath
 }
