@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Can't restore from file: %v", err)
 	}
-	fd.Close()
+	defer fd.Close()
 
 	fe, err := storage.NewFileEncoder(cfg.GetFilePath())
 	if err != nil {
