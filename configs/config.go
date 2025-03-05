@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -45,7 +44,6 @@ func (cfg *Cfg) GetBaseAddr() string {
 }
 
 func (cfg *Cfg) GetFilePath() string {
-	fmt.Println(cfg.StorageFilePath)
 	return cfg.StorageFilePath
 }
 
