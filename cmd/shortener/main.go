@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/server"
@@ -18,6 +20,13 @@ func main() {
 	defer logger.Log.Sync()
 
 	cfg := config.NewCfg()
+
+	storage.DB, err = sql.Open("pgx", cfg.GetDatabaseDsn())
+	if err != nil {
+		log.Fatalf("Can't open database: %v", err)
+	}
+	defer storage.DB.Close()
+
 	strg := storage.NewSimpleMemStorage()
 
 	fd, err := storage.NewFileDecoder(cfg.GetFilePath())
