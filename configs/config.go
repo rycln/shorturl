@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -14,8 +15,8 @@ const (
 type Cfg struct {
 	ServerAddr      string `env:"SERVER_ADDRESS"`
 	ShortBaseAddr   string `env:"BASE_URL"`
-	storageFilePath string `env:"FILE_STORAGE_PATH"`
-	databaseDsn     string `env:"DATABASE_DSN"`
+	StorageFilePath string `env:"FILE_STORAGE_PATH"`
+	DatabaseDsn     string `env:"DATABASE_DSN"`
 }
 
 func NewCfg() *Cfg {
@@ -23,8 +24,8 @@ func NewCfg() *Cfg {
 
 	flag.StringVar(&cfg.ServerAddr, "a", DefaultServerAddr, "Address and port to start the server (environment variable SERVER_ADDRESS has higher priority)")
 	flag.StringVar(&cfg.ShortBaseAddr, "b", DefaultBaseAddr, "Base address and port for short URL (environment variable BASE_URL has higher priority)")
-	flag.StringVar(&cfg.storageFilePath, "f", "", "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
-	flag.StringVar(&cfg.databaseDsn, "d", "", "Database connection address (environment variable DATABASE_DSN has higher priority)")
+	flag.StringVar(&cfg.StorageFilePath, "f", "", "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
+	flag.StringVar(&cfg.DatabaseDsn, "d", "", "Database connection address (environment variable DATABASE_DSN has higher priority)")
 	flag.Parse()
 
 	err := env.Parse(cfg)
@@ -44,9 +45,10 @@ func (cfg *Cfg) GetBaseAddr() string {
 }
 
 func (cfg *Cfg) GetFilePath() string {
-	return cfg.storageFilePath
+	fmt.Println(cfg.StorageFilePath)
+	return cfg.StorageFilePath
 }
 
 func (cfg *Cfg) GetDatabaseDsn() string {
-	return cfg.databaseDsn
+	return cfg.DatabaseDsn
 }
