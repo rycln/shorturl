@@ -1,32 +1,30 @@
 package storage
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 )
 
-var DB *sql.DB
-
-type SimpleMemStorage struct {
+type SimpleStorage struct {
 	storage map[string]string
 }
 
-func NewSimpleMemStorage() *SimpleMemStorage {
-	return &SimpleMemStorage{
+func NewSimpleStorage() *SimpleStorage {
+	return &SimpleStorage{
 		storage: make(map[string]string),
 	}
 }
 
-func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) bool {
+func (sms SimpleStorage) AddURL(ctx context.Context, shortURL, fullURL string) error {
 	_, ok := sms.storage[shortURL]
 	if ok {
-		return false
+		return errors.New("shortened URL already exist")
 	}
 	sms.storage[shortURL] = fullURL
-	return true
+	return nil
 }
 
-func (sms SimpleMemStorage) GetURL(shortURL string) (string, error) {
+func (sms SimpleStorage) GetURL(ctx context.Context, shortURL string) (string, error) {
 	_, ok := sms.storage[shortURL]
 	if !ok {
 		return "", errors.New("shortened URL does not exist")

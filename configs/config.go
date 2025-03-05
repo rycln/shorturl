@@ -7,15 +7,14 @@ import (
 )
 
 const (
-	DefaultServerAddr      = ":8080"
-	DefaultBaseAddr        = "http://localhost:8080"
-	DefaultStorageFileName = "urls"
+	DefaultServerAddr = ":8080"
+	DefaultBaseAddr   = "http://localhost:8080"
 )
 
 type Cfg struct {
 	ServerAddr      string `env:"SERVER_ADDRESS"`
 	ShortBaseAddr   string `env:"BASE_URL"`
-	StorageFilePath string `env:"FILE_STORAGE_PATH"`
+	storageFilePath string `env:"FILE_STORAGE_PATH"`
 	databaseDsn     string `env:"DATABASE_DSN"`
 }
 
@@ -24,7 +23,7 @@ func NewCfg() *Cfg {
 
 	flag.StringVar(&cfg.ServerAddr, "a", DefaultServerAddr, "Address and port to start the server (environment variable SERVER_ADDRESS has higher priority)")
 	flag.StringVar(&cfg.ShortBaseAddr, "b", DefaultBaseAddr, "Base address and port for short URL (environment variable BASE_URL has higher priority)")
-	flag.StringVar(&cfg.StorageFilePath, "f", DefaultStorageFileName, "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
+	flag.StringVar(&cfg.storageFilePath, "f", "", "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
 	flag.StringVar(&cfg.databaseDsn, "d", "", "Database connection address (environment variable DATABASE_DSN has higher priority)")
 	flag.Parse()
 
@@ -45,7 +44,7 @@ func (cfg *Cfg) GetBaseAddr() string {
 }
 
 func (cfg *Cfg) GetFilePath() string {
-	return cfg.StorageFilePath
+	return cfg.storageFilePath
 }
 
 func (cfg *Cfg) GetDatabaseDsn() string {

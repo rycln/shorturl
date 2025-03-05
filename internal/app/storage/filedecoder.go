@@ -1,31 +1,52 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 )
 
-type FileEncoder struct {
+type FileDecoder struct {
 	file    *os.File
-	encoder *json.Encoder
+	decoder *json.Decoder
 }
 
-func NewFileEncoder(fileName string) (*FileEncoder, error) {
-	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+func NewFileDecoder(fileName string) (*FileDecoder, error) {
+	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
 
-	return &FileEncoder{
+	return &FileDecoder{
 		file:    file,
-		encoder: json.NewEncoder(file),
+		decoder: json.NewDecoder(file),
 	}, nil
 }
 
-func (fe *FileEncoder) Close() error {
-	return fe.file.Close()
+func (fd *FileDecoder) Close() error {
+	return fd.file.Close()
 }
 
-func (fe *FileEncoder) WriteInto(surl *StoredURL) error {
-	return fe.encoder.Encode(&surl)
+func (fd *FileDecoder) getFromFile(ctx context.Context, shortURL string) (string, error) {
+	for {
+		surl := &storedURL{}
+		err := fd.decoder.Decode(&surl)
+		if err != nil {
+			if err != io.EOF {
+				return "", err
+			}
+			return "", errors.New("shortened URL does not exist")
+		}
+		if surl.ShortURL == shortURL {
+			return surl.FullURL, nil
+		}
+		select {
+		case <-ctx.Done():
+			return "", errors.New("time limit exceeded")
+		default:
+			continue
+		}
+	}
 }

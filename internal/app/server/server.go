@@ -18,28 +18,23 @@ import (
 
 type configer interface {
 	GetBaseAddr() string
+	GetDatabaseDsn() string
 }
 
 type storager interface {
-	AddURL(string, string) bool
-	GetURL(string) (string, error)
-}
-
-type fileWriter interface {
-	WriteInto(*storage.StoredURL) error
+	AddURL(context.Context, string, string) error
+	GetURL(context.Context, string) (string, error)
 }
 
 type ServerArgs struct {
-	storage    storager
-	config     configer
-	fileWriter fileWriter
+	storage storager
+	config  configer
 }
 
-func NewServerArgs(strg storager, cfg configer, fw fileWriter) *ServerArgs {
+func NewServerArgs(strg storager, cfg configer) *ServerArgs {
 	return &ServerArgs{
-		storage:    strg,
-		config:     cfg,
-		fileWriter: fw,
+		storage: strg,
+		config:  cfg,
 	}
 }
 
@@ -52,15 +47,14 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 
 	fullURL := body
 	shortURL := myhash.Base62(fullURL)
-	ok := sa.storage.AddURL(shortURL, fullURL)
-	if ok {
-		surl := storage.NewStoredURL(shortURL, fullURL)
-		err := sa.fileWriter.WriteInto(surl)
-		if err != nil {
-			return c.SendStatus(http.StatusInternalServerError)
-		}
-	}
 
+	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
+	defer cancel()
+
+	err = sa.storage.AddURL(ctx, shortURL, fullURL)
+	if err != nil {
+		return c.SendStatus(http.StatusInternalServerError)
+	}
 	c.Set("Content-Type", "text/plain")
 	baseAddr := sa.config.GetBaseAddr()
 	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
@@ -68,7 +62,11 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 
 func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 	shortURL := c.Params("short")
-	fullURL, err := sa.storage.GetURL(shortURL)
+
+	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
+	defer cancel()
+
+	fullURL, err := sa.storage.GetURL(ctx, shortURL)
 	if err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}
@@ -102,13 +100,13 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 
 	fullURL := req.URL
 	shortURL := myhash.Base62(fullURL)
-	ok := sa.storage.AddURL(shortURL, fullURL)
-	if ok {
-		surl := storage.NewStoredURL(shortURL, fullURL)
-		err := sa.fileWriter.WriteInto(surl)
-		if err != nil {
-			return c.SendStatus(http.StatusInternalServerError)
-		}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
+	defer cancel()
+
+	err = sa.storage.AddURL(ctx, shortURL, fullURL)
+	if err != nil {
+		return c.SendStatus(http.StatusInternalServerError)
 	}
 
 	var res apiRes
@@ -122,8 +120,11 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).Send(resBody)
 }
 
-func PingDB(c *fiber.Ctx) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
+	if sa.config.GetDatabaseDsn() == "" {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
 	if err := storage.DB.PingContext(ctx); err != nil {
 		return c.SendStatus(http.StatusInternalServerError)
@@ -139,7 +140,7 @@ func Set(app *fiber.App, sa *ServerArgs) {
 	}))
 
 	app.Post("/api/shorten", sa.ShortenAPI)
-	app.Get("/ping", PingDB)
+	app.Get("/ping", sa.PingDB)
 	app.Get("/:short", sa.ReturnURL)
 	app.Post("/", sa.ShortenURL)
 

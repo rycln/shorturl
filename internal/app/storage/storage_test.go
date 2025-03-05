@@ -1,14 +1,15 @@
 package storage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 type testStorager interface {
-	AddURL(string, string) bool
-	GetURL(string) (string, error)
+	AddURL(context.Context, string, string) error
+	GetURL(context.Context, string) (string, error)
 }
 
 type testStorage struct {
@@ -116,15 +117,15 @@ func TestAddURLAndGetURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage := NewSimpleMemStorage()
+			storage := NewSimpleStorage()
 			ts := NewTestStorage(storage)
 
 			if assert.Equal(t, len(test.shortURLs), len(test.fullURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					ts.ts.AddURL(test.shortURLs[i], test.fullURLs[i])
+					ts.ts.AddURL(context.Background(), test.shortURLs[i], test.fullURLs[i])
 				}
 				for k, v := range test.want.mustContain {
-					recFullURL, err := ts.ts.GetURL(k)
+					recFullURL, err := ts.ts.GetURL(context.Background(), k)
 					if err != nil {
 						if !test.want.wantErr {
 							assert.Error(t, err)

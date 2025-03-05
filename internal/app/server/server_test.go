@@ -2,7 +2,7 @@ package server
 
 import (
 	"bytes"
-	"encoding/json"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,42 +16,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testEncoder struct {
-	buf     *bytes.Buffer
-	encoder *json.Encoder
-}
-
-func newTestEncoder() *testEncoder {
-	var b []byte
-	buf := bytes.NewBuffer(b)
-	return &testEncoder{
-		buf:     buf,
-		encoder: json.NewEncoder(buf),
-	}
-}
-
-func (te *testEncoder) WriteInto(surl *storage.StoredURL) error {
-	return te.encoder.Encode(&surl)
-}
-
 func TestHandlerVariables_ShortenURL(t *testing.T) {
 	config := &config.Cfg{
 		ServerAddr:    config.DefaultServerAddr,
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
 
-	te := newTestEncoder()
-
 	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
-	sa := NewServerArgs(storage, config, te)
+	storage := storage.NewSimpleStorage()
+	sa := NewServerArgs(storage, config)
 	Set(app, sa)
 
 	type want struct {
 		code        int
 		resContains string
 		contentType string
-		bufContains string
 	}
 	tests := []struct {
 		name   string
@@ -69,7 +48,6 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 				code:        http.StatusCreated,
 				resContains: "http://localhost:8080/",
 				contentType: "text/plain",
-				bufContains: "https://practicum.yandex.ru/",
 			},
 		},
 		{
@@ -117,7 +95,6 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 				require.NoError(t, err)
 				assert.Contains(t, string(resBody), test.want.resContains)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
-				assert.Contains(t, te.buf.String(), test.want.bufContains)
 			}
 		})
 	}
@@ -129,11 +106,9 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
 
-	te := newTestEncoder()
-
 	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
-	sa := NewServerArgs(storage, config, te)
+	storage := storage.NewSimpleStorage()
+	sa := NewServerArgs(storage, config)
 	Set(app, sa)
 
 	type want struct {
@@ -196,7 +171,7 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			for shortURL, fullURL := range test.storeContains {
-				sa.storage.AddURL(shortURL, fullURL)
+				sa.storage.AddURL(context.Background(), shortURL, fullURL)
 			}
 			request := httptest.NewRequest(test.method, test.path, nil)
 			res, err := app.Test(request, -1)
@@ -218,18 +193,15 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 		ShortBaseAddr: config.DefaultBaseAddr,
 	}
 
-	te := newTestEncoder()
-
 	app := fiber.New()
-	storage := storage.NewSimpleMemStorage()
-	sa := NewServerArgs(storage, config, te)
+	storage := storage.NewSimpleStorage()
+	sa := NewServerArgs(storage, config)
 	Set(app, sa)
 
 	type want struct {
 		code        int
 		resContains string
 		contentType string
-		bufContains string
 	}
 	tests := []struct {
 		name   string
@@ -247,7 +219,6 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 				code:        http.StatusCreated,
 				resContains: "http://localhost:8080/",
 				contentType: "application/json",
-				bufContains: "https://practicum.yandex.ru/",
 			},
 		},
 		{
@@ -319,7 +290,6 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 				require.NoError(t, err)
 				assert.Contains(t, string(resBody), test.want.resContains)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
-				assert.Contains(t, te.buf.String(), test.want.bufContains)
 			}
 		})
 	}
