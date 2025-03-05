@@ -1,8 +1,11 @@
 package storage
 
 import (
+	"database/sql"
 	"errors"
 )
+
+var DB *sql.DB
 
 type SimpleMemStorage struct {
 	storage map[string]string

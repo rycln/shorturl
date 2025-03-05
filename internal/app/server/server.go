@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
@@ -120,6 +122,15 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).Send(resBody)
 }
 
+func PingDB(c *fiber.Ctx) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	if err := storage.DB.PingContext(ctx); err != nil {
+		return c.SendStatus(http.StatusInternalServerError)
+	}
+	return c.SendStatus(http.StatusOK)
+}
+
 func Set(app *fiber.App, sa *ServerArgs) {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Log,
@@ -128,6 +139,7 @@ func Set(app *fiber.App, sa *ServerArgs) {
 	}))
 
 	app.Post("/api/shorten", sa.ShortenAPI)
+	app.Get("/ping", PingDB)
 	app.Get("/:short", sa.ReturnURL)
 	app.Post("/", sa.ShortenURL)
 
