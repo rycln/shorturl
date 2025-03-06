@@ -11,7 +11,8 @@ import (
 var DB *sql.DB
 
 func DBInit(databaseDsn string) error {
-	DB, err := sql.Open("pgx", databaseDsn)
+	var err error
+	DB, err = sql.Open("pgx", databaseDsn)
 	if err != nil {
 		return err
 	}
