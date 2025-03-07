@@ -10,7 +10,7 @@ import (
 
 var DB *sql.DB
 
-func DBInit(databaseDsn string) error {
+func DBInitPostgre(databaseDsn string) error {
 	var err error
 	DB, err = sql.Open("pgx", databaseDsn)
 	if err != nil {

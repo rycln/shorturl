@@ -122,6 +122,57 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).Send(resBody)
 }
 
+type batchReq struct {
+	ID      string `json:"correlation_id"`
+	OrigURL string `json:"original_url"`
+}
+
+type batchRes struct {
+	ID       string `json:"correlation_id"`
+	ShortURL string `json:"short_url"`
+}
+
+func newBatchRes(id, shortURL string) batchRes {
+	return batchRes{
+		ID:       id,
+		ShortURL: shortURL,
+	}
+}
+
+func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
+	if !c.Is("json") {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	var reqBatches = []batchReq{}
+	err := json.Unmarshal(c.Body(), &reqBatches)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	surls := make([]storage.ShortenedURL, len(reqBatches))
+	resBatches := make([]batchRes, len(reqBatches))
+	baseAddr := sa.cfg.GetBaseAddr()
+	for i, b := range reqBatches {
+		shortURL := myhash.Base62(b.OrigURL)
+		surls[i] = storage.NewShortenedURL(shortURL, b.OrigURL)
+		resBatches[i] = newBatchRes(b.ID, baseAddr+"/"+shortURL)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
+	defer cancel()
+	err = sa.strg.AddURL(ctx, surls...)
+	if err != nil {
+		return c.SendStatus(http.StatusInternalServerError)
+	}
+	resBody, err := json.Marshal(&resBatches)
+	if err != nil {
+		c.SendStatus(http.StatusInternalServerError)
+	}
+	c.Set("Content-Type", "application/json")
+	return c.Status(http.StatusCreated).Send(resBody)
+}
+
 func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
 	if sa.cfg.GetDatabaseDsn() == "" {
 		return c.SendStatus(http.StatusBadRequest)
@@ -141,6 +192,7 @@ func Set(app *fiber.App, sa *ServerArgs) {
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
 
+	app.Post("/api/shorten/batch", sa.ShortenBatch)
 	app.Post("/api/shorten", sa.ShortenAPI)
 	app.Get("/ping", sa.PingDB)
 	app.Get("/:short", sa.ReturnURL)

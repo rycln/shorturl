@@ -22,7 +22,7 @@ func main() {
 
 	switch {
 	case cfg.GetDatabaseDsn() != "":
-		err := storage.DBInit(cfg.GetDatabaseDsn())
+		err := storage.DBInitPostgre(cfg.GetDatabaseDsn())
 		if err != nil {
 			log.Fatalf("Can't open database: %v", err)
 		}
