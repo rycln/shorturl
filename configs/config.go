@@ -50,3 +50,14 @@ func (cfg *Cfg) GetFilePath() string {
 func (cfg *Cfg) GetDatabaseDsn() string {
 	return cfg.DatabaseDsn
 }
+
+func (cfg *Cfg) StorageIs() string {
+	switch {
+	case cfg.DatabaseDsn != "":
+		return "db"
+	case cfg.StorageFilePath != "":
+		return "file"
+	default:
+		return ""
+	}
+}

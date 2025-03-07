@@ -1,189 +1,17 @@
 package server
 
 import (
-	"context"
-	"encoding/json"
+	"log"
 	"net/http"
-	"net/url"
-	"time"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
-	"github.com/rycln/shorturl/internal/app/myhash"
 	"github.com/rycln/shorturl/internal/app/storage"
 	"go.uber.org/zap/zapcore"
 )
-
-type configer interface {
-	GetBaseAddr() string
-	GetDatabaseDsn() string
-}
-
-type storager interface {
-	AddURL(context.Context, ...storage.ShortenedURL) error
-	GetURL(context.Context, string) (string, error)
-}
-
-type ServerArgs struct {
-	strg storager
-	cfg  configer
-}
-
-func NewServerArgs(strg storager, cfg configer) *ServerArgs {
-	return &ServerArgs{
-		strg: strg,
-		cfg:  cfg,
-	}
-}
-
-func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
-	body := string(c.Body())
-	_, err := url.ParseRequestURI(body)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	origURL := body
-	shortURL := myhash.Base62(origURL)
-
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-
-	surl := storage.NewShortenedURL(shortURL, origURL)
-	err = sa.strg.AddURL(ctx, surl)
-	if err != nil {
-		return c.SendStatus(http.StatusInternalServerError)
-	}
-	c.Set("Content-Type", "text/plain")
-	baseAddr := sa.cfg.GetBaseAddr()
-	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
-}
-
-func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
-	shortURL := c.Params("short")
-
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-
-	origURL, err := sa.strg.GetURL(ctx, shortURL)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-	c.Set("Location", origURL)
-	return c.SendStatus(http.StatusTemporaryRedirect)
-}
-
-type apiReq struct {
-	URL string `json:"url"`
-}
-
-type apiRes struct {
-	Result string `json:"result"`
-}
-
-func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
-	if !c.Is("json") {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	var req apiReq
-	err := json.Unmarshal(c.Body(), &req)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	_, err = url.ParseRequestURI(req.URL)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	origURL := req.URL
-	shortURL := myhash.Base62(origURL)
-
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-
-	surl := storage.NewShortenedURL(shortURL, origURL)
-	err = sa.strg.AddURL(ctx, surl)
-	if err != nil {
-		return c.SendStatus(http.StatusInternalServerError)
-	}
-
-	var res apiRes
-	baseAddr := sa.cfg.GetBaseAddr()
-	res.Result = baseAddr + "/" + shortURL
-	resBody, err := json.Marshal(&res)
-	if err != nil {
-		c.SendStatus(http.StatusInternalServerError)
-	}
-	c.Set("Content-Type", "application/json")
-	return c.Status(http.StatusCreated).Send(resBody)
-}
-
-type batchReq struct {
-	ID      string `json:"correlation_id"`
-	OrigURL string `json:"original_url"`
-}
-
-type batchRes struct {
-	ID       string `json:"correlation_id"`
-	ShortURL string `json:"short_url"`
-}
-
-func newBatchRes(id, shortURL string) batchRes {
-	return batchRes{
-		ID:       id,
-		ShortURL: shortURL,
-	}
-}
-
-func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
-	if !c.Is("json") {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	var reqBatches = []batchReq{}
-	err := json.Unmarshal(c.Body(), &reqBatches)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	surls := make([]storage.ShortenedURL, len(reqBatches))
-	resBatches := make([]batchRes, len(reqBatches))
-	baseAddr := sa.cfg.GetBaseAddr()
-	for i, b := range reqBatches {
-		shortURL := myhash.Base62(b.OrigURL)
-		surls[i] = storage.NewShortenedURL(shortURL, b.OrigURL)
-		resBatches[i] = newBatchRes(b.ID, baseAddr+"/"+shortURL)
-	}
-
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-	err = sa.strg.AddURL(ctx, surls...)
-	if err != nil {
-		return c.SendStatus(http.StatusInternalServerError)
-	}
-	resBody, err := json.Marshal(&resBatches)
-	if err != nil {
-		c.SendStatus(http.StatusInternalServerError)
-	}
-	c.Set("Content-Type", "application/json")
-	return c.Status(http.StatusCreated).Send(resBody)
-}
-
-func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
-	if sa.cfg.GetDatabaseDsn() == "" {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-	if err := storage.DB.PingContext(ctx); err != nil {
-		return c.SendStatus(http.StatusInternalServerError)
-	}
-	return c.SendStatus(http.StatusOK)
-}
 
 func Set(app *fiber.App, sa *ServerArgs) {
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -205,4 +33,57 @@ func Set(app *fiber.App, sa *ServerArgs) {
 	app.Use(func(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	})
+}
+
+func StartWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
+	strg := storage.NewSimpleStorage()
+
+	sa := NewServerArgs(strg, cfg)
+	Set(app, sa)
+
+	err := app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
+	}
+}
+
+func StartWithFileStorage(app *fiber.App, cfg *config.Cfg) {
+	fd, err := storage.NewFileDecoder(cfg.GetFilePath())
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fd.Close()
+
+	fe, err := storage.NewFileEncoder(cfg.GetFilePath())
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fe.Close()
+
+	fs := storage.NewFileStorage(fe, fd)
+
+	sa := NewServerArgs(fs, cfg)
+	Set(app, sa)
+
+	err = app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
+	}
+}
+
+func StartWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
+	err := storage.DBInitPostgre(cfg.GetDatabaseDsn())
+	if err != nil {
+		log.Fatalf("Can't open database: %v", err)
+	}
+	db := storage.NewDatabaseStorage(storage.DB)
+	defer db.Close()
+
+	sa := NewServerArgs(db, cfg)
+	Set(app, sa)
+
+	err = app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
+	}
 }
