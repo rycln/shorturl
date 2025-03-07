@@ -1,33 +1,14 @@
 package storage
 
-import (
-	"context"
-	"errors"
-)
-
-type SimpleStorage struct {
-	storage map[string]string
+type ShortenedURL struct {
+	ShortURL string `json:"short_url"`
+	OrigURL  string `json:"original_url"`
 }
 
-func NewSimpleStorage() *SimpleStorage {
-	return &SimpleStorage{
-		storage: make(map[string]string),
+func NewShortenedURL(shortURL, origURL string) ShortenedURL {
+	surl := ShortenedURL{
+		ShortURL: shortURL,
+		OrigURL:  origURL,
 	}
-}
-
-func (sms SimpleStorage) AddURL(ctx context.Context, shortURL, fullURL string) error {
-	_, ok := sms.storage[shortURL]
-	if ok {
-		return errors.New("shortened URL already exist")
-	}
-	sms.storage[shortURL] = fullURL
-	return nil
-}
-
-func (sms SimpleStorage) GetURL(ctx context.Context, shortURL string) (string, error) {
-	_, ok := sms.storage[shortURL]
-	if !ok {
-		return "", errors.New("shortened URL does not exist")
-	}
-	return sms.storage[shortURL], nil
+	return surl
 }

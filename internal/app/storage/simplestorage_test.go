@@ -8,7 +8,7 @@ import (
 )
 
 type testStorager interface {
-	AddURL(context.Context, string, string) error
+	AddURL(context.Context, ...ShortenedURL) error
 	GetURL(context.Context, string) (string, error)
 }
 
@@ -16,8 +16,8 @@ type testStorage struct {
 	ts testStorager
 }
 
-func NewTestStorage(ts testStorager) *testStorage {
-	return &testStorage{
+func NewTestStorage(ts testStorager) testStorage {
+	return testStorage{
 		ts: ts,
 	}
 }
@@ -31,7 +31,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 	tests := []struct {
 		name      string
 		shortURLs []string
-		fullURLs  []string
+		origURLs  []string
 		want      want
 	}{
 		{
@@ -39,7 +39,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 			shortURLs: []string{
 				"abcdefg",
 			},
-			fullURLs: []string{
+			origURLs: []string{
 				"https://practicum.yandex.ru/",
 			},
 			want: want{
@@ -54,7 +54,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 			shortURLs: []string{
 				"1234ABC",
 			},
-			fullURLs: []string{
+			origURLs: []string{
 				"https://ya.ru/",
 			},
 			want: want{
@@ -70,7 +70,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 				"abcdefg",
 				"1234ABC",
 			},
-			fullURLs: []string{
+			origURLs: []string{
 				"https://practicum.yandex.ru/",
 				"https://ya.ru/",
 			},
@@ -88,7 +88,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 				"abcdefg",
 				"abcdefg",
 			},
-			fullURLs: []string{
+			origURLs: []string{
 				"https://practicum.yandex.ru/",
 				"https://practicum.yandex.ru/",
 			},
@@ -104,7 +104,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 			shortURLs: []string{
 				"abcdefg",
 			},
-			fullURLs: []string{
+			origURLs: []string{
 				"https://practicum.yandex.ru/",
 			},
 			want: want{
@@ -117,22 +117,23 @@ func TestAddURLAndGetURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage := NewSimpleStorage()
-			ts := NewTestStorage(storage)
+			strg := NewSimpleStorage()
+			ts := NewTestStorage(strg)
 
-			if assert.Equal(t, len(test.shortURLs), len(test.fullURLs), "wrong tests") {
+			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					ts.ts.AddURL(context.Background(), test.shortURLs[i], test.fullURLs[i])
+					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					ts.ts.AddURL(context.Background(), surl)
 				}
 				for k, v := range test.want.mustContain {
-					recFullURL, err := ts.ts.GetURL(context.Background(), k)
+					recOrigURL, err := ts.ts.GetURL(context.Background(), k)
 					if err != nil {
 						if !test.want.wantErr {
 							assert.Error(t, err)
 						}
 					}
 					if !test.want.wantErr {
-						assert.Equal(t, v, recFullURL)
+						assert.Equal(t, v, recOrigURL)
 					}
 				}
 			}

@@ -39,20 +39,27 @@ func (dbs *DatabaseStorage) Close() error {
 	return dbs.db.Close()
 }
 
-func (dbs *DatabaseStorage) AddURL(ctx context.Context, shortURL, fullURL string) error {
-	_, err := dbs.db.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES ($1, $2)", shortURL, fullURL)
+func (dbs *DatabaseStorage) AddURL(ctx context.Context, surls ...ShortenedURL) error {
+	tx, err := dbs.db.Begin()
 	if err != nil {
 		return err
 	}
-	return nil
+	for _, surl := range surls {
+		_, err := tx.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES ($1, $2)", surl.ShortURL, surl.OrigURL)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (dbs *DatabaseStorage) GetURL(ctx context.Context, shortURL string) (string, error) {
 	row := dbs.db.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url = $1", shortURL)
-	var fullURL string
-	err := row.Scan(&fullURL)
+	var origURL string
+	err := row.Scan(&origURL)
 	if err != nil {
 		return "", err
 	}
-	return fullURL, nil
+	return origURL, nil
 }

@@ -2,24 +2,7 @@ package storage
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
-
-type storedURL struct {
-	ID       string `json:"uuid"`
-	ShortURL string `json:"short_url"`
-	FullURL  string `json:"original_url"`
-}
-
-func newStoredURL(shortURL, fullURL string) *storedURL {
-	surl := &storedURL{
-		ID:       uuid.NewString(),
-		ShortURL: shortURL,
-		FullURL:  fullURL,
-	}
-	return surl
-}
 
 type FileStorage struct {
 	encoder *FileEncoder
@@ -33,11 +16,12 @@ func NewFileStorage(enc *FileEncoder, dec *FileDecoder) *FileStorage {
 	}
 }
 
-func (fs *FileStorage) AddURL(ctx context.Context, shortURL, fullURL string) error {
-	surl := newStoredURL(shortURL, fullURL)
-	err := fs.encoder.writeIntoFile(surl)
-	if err != nil {
-		return err
+func (fs *FileStorage) AddURL(ctx context.Context, surls ...ShortenedURL) error {
+	for _, surl := range surls {
+		err := fs.encoder.writeIntoFile(&surl)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

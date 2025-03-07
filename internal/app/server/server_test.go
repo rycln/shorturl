@@ -23,8 +23,8 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 	}
 
 	app := fiber.New()
-	storage := storage.NewSimpleStorage()
-	sa := NewServerArgs(storage, config)
+	strg := storage.NewSimpleStorage()
+	sa := NewServerArgs(strg, config)
 	Set(app, sa)
 
 	type want struct {
@@ -107,8 +107,8 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 	}
 
 	app := fiber.New()
-	storage := storage.NewSimpleStorage()
-	sa := NewServerArgs(storage, config)
+	strg := storage.NewSimpleStorage()
+	sa := NewServerArgs(strg, config)
 	Set(app, sa)
 
 	type want struct {
@@ -170,8 +170,9 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			for shortURL, fullURL := range test.storeContains {
-				sa.storage.AddURL(context.Background(), shortURL, fullURL)
+			for shortURL, origURL := range test.storeContains {
+				surl := storage.NewShortenedURL(shortURL, origURL)
+				sa.strg.AddURL(context.Background(), surl)
 			}
 			request := httptest.NewRequest(test.method, test.path, nil)
 			res, err := app.Test(request, -1)
@@ -194,8 +195,8 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 	}
 
 	app := fiber.New()
-	storage := storage.NewSimpleStorage()
-	sa := NewServerArgs(storage, config)
+	strg := storage.NewSimpleStorage()
+	sa := NewServerArgs(strg, config)
 	Set(app, sa)
 
 	type want struct {

@@ -31,8 +31,8 @@ func (fd *FileDecoder) Close() error {
 
 func (fd *FileDecoder) getFromFile(ctx context.Context, shortURL string) (string, error) {
 	for {
-		surl := &storedURL{}
-		err := fd.decoder.Decode(&surl)
+		surl := &ShortenedURL{}
+		err := fd.decoder.Decode(surl)
 		if err != nil {
 			if err != io.EOF {
 				return "", err
@@ -40,7 +40,7 @@ func (fd *FileDecoder) getFromFile(ctx context.Context, shortURL string) (string
 			return "", errors.New("shortened URL does not exist")
 		}
 		if surl.ShortURL == shortURL {
-			return surl.FullURL, nil
+			return surl.OrigURL, nil
 		}
 		select {
 		case <-ctx.Done():

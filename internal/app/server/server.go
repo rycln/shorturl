@@ -22,19 +22,19 @@ type configer interface {
 }
 
 type storager interface {
-	AddURL(context.Context, string, string) error
+	AddURL(context.Context, ...storage.ShortenedURL) error
 	GetURL(context.Context, string) (string, error)
 }
 
 type ServerArgs struct {
-	storage storager
-	config  configer
+	strg storager
+	cfg  configer
 }
 
 func NewServerArgs(strg storager, cfg configer) *ServerArgs {
 	return &ServerArgs{
-		storage: strg,
-		config:  cfg,
+		strg: strg,
+		cfg:  cfg,
 	}
 }
 
@@ -45,18 +45,19 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	fullURL := body
-	shortURL := myhash.Base62(fullURL)
+	origURL := body
+	shortURL := myhash.Base62(origURL)
 
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
 
-	err = sa.storage.AddURL(ctx, shortURL, fullURL)
+	surl := storage.NewShortenedURL(shortURL, origURL)
+	err = sa.strg.AddURL(ctx, surl)
 	if err != nil {
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 	c.Set("Content-Type", "text/plain")
-	baseAddr := sa.config.GetBaseAddr()
+	baseAddr := sa.cfg.GetBaseAddr()
 	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
 }
 
@@ -66,11 +67,11 @@ func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
 
-	fullURL, err := sa.storage.GetURL(ctx, shortURL)
+	origURL, err := sa.strg.GetURL(ctx, shortURL)
 	if err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}
-	c.Set("Location", fullURL)
+	c.Set("Location", origURL)
 	return c.SendStatus(http.StatusTemporaryRedirect)
 }
 
@@ -98,19 +99,20 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	fullURL := req.URL
-	shortURL := myhash.Base62(fullURL)
+	origURL := req.URL
+	shortURL := myhash.Base62(origURL)
 
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
 
-	err = sa.storage.AddURL(ctx, shortURL, fullURL)
+	surl := storage.NewShortenedURL(shortURL, origURL)
+	err = sa.strg.AddURL(ctx, surl)
 	if err != nil {
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 
 	var res apiRes
-	baseAddr := sa.config.GetBaseAddr()
+	baseAddr := sa.cfg.GetBaseAddr()
 	res.Result = baseAddr + "/" + shortURL
 	resBody, err := json.Marshal(&res)
 	if err != nil {
@@ -121,7 +123,7 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 }
 
 func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
-	if sa.config.GetDatabaseDsn() == "" {
+	if sa.cfg.GetDatabaseDsn() == "" {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
