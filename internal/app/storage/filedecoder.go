@@ -29,22 +29,22 @@ func (fd *FileDecoder) Close() error {
 	return fd.file.Close()
 }
 
-func (fd *FileDecoder) getFromFile(ctx context.Context, shortURL string) (string, error) {
+func (fd *FileDecoder) getFromFile(ctx context.Context, url string) (*ShortenedURL, error) {
 	for {
 		surl := &ShortenedURL{}
 		err := fd.decoder.Decode(surl)
 		if err != nil {
-			if err != io.EOF {
-				return "", err
+			if errors.Is(err, io.EOF) {
+				return nil, ErrNotExist
 			}
-			return "", errors.New("shortened URL does not exist")
+			return nil, err
 		}
-		if surl.ShortURL == shortURL {
-			return surl.OrigURL, nil
+		if surl.ShortURL == url || surl.OrigURL == url {
+			return surl, nil
 		}
 		select {
 		case <-ctx.Done():
-			return "", errors.New("time limit exceeded")
+			return nil, ErrTimeLimit
 		default:
 			continue
 		}

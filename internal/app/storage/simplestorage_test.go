@@ -8,8 +8,8 @@ import (
 )
 
 type testStorager interface {
-	AddURL(context.Context, ...ShortenedURL) error
-	GetURL(context.Context, string) (string, error)
+	AddURL(context.Context, ShortenedURL) error
+	GetOrigURL(context.Context, string) (string, error)
 }
 
 type testStorage struct {
@@ -126,7 +126,7 @@ func TestAddURLAndGetURL(t *testing.T) {
 					ts.ts.AddURL(context.Background(), surl)
 				}
 				for k, v := range test.want.mustContain {
-					recOrigURL, err := ts.ts.GetURL(context.Background(), k)
+					recOrigURL, err := ts.ts.GetOrigURL(context.Background(), k)
 					if err != nil {
 						if !test.want.wantErr {
 							assert.Error(t, err)
