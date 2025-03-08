@@ -7,11 +7,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-)
-
-var (
-	errPgUniqueViolation = errors.New(pgerrcode.UniqueViolation)
 )
 
 var DB *sql.DB
@@ -53,7 +50,8 @@ func (dbs *DatabaseStorage) AddURL(ctx context.Context, surl ShortenedURL) error
 	_, err = tx.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES ($1, $2)", surl.ShortURL, surl.OrigURL)
 	if err != nil {
 		tx.Rollback()
-		if errors.Is(err, errPgUniqueViolation) {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			return ErrConflict
 		}
 		return err
