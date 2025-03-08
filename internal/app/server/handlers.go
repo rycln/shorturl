@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
 	"github.com/rycln/shorturl/internal/app/storage"
+	"go.uber.org/zap"
 )
 
 type configer interface {
@@ -68,10 +70,16 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 			var err error
 			shortURL, err = sa.strg.GetShortURL(ctx, origURL)
 			if err != nil {
+				logger.Log.Info("/ get short url error",
+					zap.Error(err),
+				)
 				return c.SendStatus(http.StatusInternalServerError)
 			}
 			status = http.StatusConflict
 		} else {
+			logger.Log.Info("/ add url error",
+				zap.Error(err),
+			)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 	}
@@ -134,10 +142,16 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 			var err error
 			shortURL, err = sa.strg.GetShortURL(ctx, origURL)
 			if err != nil {
+				logger.Log.Info("/api/shorten get short url error",
+					zap.Error(err),
+				)
 				return c.SendStatus(http.StatusInternalServerError)
 			}
 			status = http.StatusConflict
 		} else {
+			logger.Log.Info("/api/shorten add url error",
+				zap.Error(err),
+			)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 	}
@@ -147,6 +161,9 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	res.Result = baseAddr + "/" + shortURL
 	resBody, err := json.Marshal(&res)
 	if err != nil {
+		logger.Log.Info("/api/shorten marshaling error",
+			zap.Error(err),
+		)
 		c.SendStatus(http.StatusInternalServerError)
 	}
 	c.Set("Content-Type", "application/json")
@@ -194,10 +211,16 @@ func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
 	defer cancel()
 	err = sa.strg.AddBatchURL(ctx, surls)
 	if err != nil {
+		logger.Log.Info("add batch error",
+			zap.Error(err),
+		)
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 	resBody, err := json.Marshal(&resBatches)
 	if err != nil {
+		logger.Log.Info("batch marshaling error",
+			zap.Error(err),
+		)
 		c.SendStatus(http.StatusInternalServerError)
 	}
 	c.Set("Content-Type", "application/json")
@@ -211,6 +234,9 @@ func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
 	if err := storage.DB.PingContext(ctx); err != nil {
+		logger.Log.Info("db ping error",
+			zap.Error(err),
+		)
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 	return c.SendStatus(http.StatusOK)
