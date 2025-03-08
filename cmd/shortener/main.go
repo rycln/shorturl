@@ -7,6 +7,7 @@ import (
 	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/server"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -17,12 +18,23 @@ func main() {
 	defer logger.Log.Sync()
 
 	cfg := config.NewCfg()
+	logger.Log.Info("Server configuration:",
+		zap.String("addr", cfg.GetServerAddr()),
+		zap.String("base_url", cfg.GetBaseAddr()),
+		zap.String("storage", cfg.StorageIs()),
+	)
 	app := fiber.New()
 
 	switch cfg.StorageIs() {
 	case "db":
+		logger.Log.Info("Storage configuration",
+			zap.String("db_dsn", cfg.GetDatabaseDsn()),
+		)
 		server.StartWithDatabaseStorage(app, cfg)
 	case "file":
+		logger.Log.Info("Storage configuration",
+			zap.String("file_path", cfg.GetFilePath()),
+		)
 		server.StartWithFileStorage(app, cfg)
 	default:
 		server.StartWithSimpleStorage(app, cfg)

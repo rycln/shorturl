@@ -58,6 +58,6 @@ func (cfg *Cfg) StorageIs() string {
 	case cfg.StorageFilePath != "":
 		return "file"
 	default:
-		return ""
+		return "app"
 	}
 }
