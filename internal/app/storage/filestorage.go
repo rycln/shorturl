@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 )
 
 type FileStorage struct {
@@ -18,16 +17,7 @@ func NewFileStorage(enc *FileEncoder, dec *FileDecoder) *FileStorage {
 }
 
 func (fs *FileStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
-	checkURL, err := fs.decoder.getFromFile(ctx, surl.OrigURL)
-	if err != nil {
-		if !errors.Is(err, ErrNotExist) {
-			return err
-		}
-	}
-	if checkURL != nil {
-		return ErrConflict
-	}
-	err = fs.encoder.writeIntoFile(&surl)
+	err := fs.encoder.writeIntoFile(&surl)
 	if err != nil {
 		return err
 	}
