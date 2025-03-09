@@ -203,6 +203,10 @@ func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
 	resBatches := make([]batchRes, len(reqBatches))
 	baseAddr := sa.cfg.GetBaseAddr()
 	for i, b := range reqBatches {
+		_, err = url.ParseRequestURI(b.OrigURL)
+		if err != nil {
+			return c.SendStatus(http.StatusBadRequest)
+		}
 		shortURL := myhash.Base62(b.OrigURL)
 		surls[i] = storage.NewShortenedURL(shortURL, b.OrigURL)
 		resBatches[i] = newBatchRes(b.ID, baseAddr+"/"+shortURL)
