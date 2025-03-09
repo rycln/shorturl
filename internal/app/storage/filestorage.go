@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 )
 
@@ -28,7 +29,7 @@ func (fs *FileStorage) Close() {
 func (fs *FileStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
 	_, err := fs.getFromFile(ctx, surl.OrigURL)
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, ErrNotExist) {
 			err := fs.encoder.writeIntoFile(&surl)
 			if err != nil {
 				return err
