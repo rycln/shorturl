@@ -67,17 +67,18 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 		if errors.Is(err, storage.ErrConflict) {
 			ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 			defer cancel()
+
 			var err error
 			shortURL, err = sa.strg.GetShortURL(ctx, origURL)
 			if err != nil {
-				logger.Log.Info("/ get short url error",
+				logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
 					zap.Error(err),
 				)
 				return c.SendStatus(http.StatusInternalServerError)
 			}
 			status = http.StatusConflict
 		} else {
-			logger.Log.Info("/ add url error",
+			logger.Log.Info("path:"+c.Path()+", "+"func:AddURL()",
 				zap.Error(err),
 			)
 			return c.SendStatus(http.StatusInternalServerError)
@@ -139,29 +140,29 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 		if errors.Is(err, storage.ErrConflict) {
 			ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 			defer cancel()
+
 			var err error
 			shortURL, err = sa.strg.GetShortURL(ctx, origURL)
 			if err != nil {
-				logger.Log.Info("/api/shorten get short url error",
+				logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
 					zap.Error(err),
 				)
 				return c.SendStatus(http.StatusInternalServerError)
 			}
 			status = http.StatusConflict
 		} else {
-			logger.Log.Info("/api/shorten add url error",
+			logger.Log.Info("path:"+c.Path()+", "+"func:AddURL()",
 				zap.Error(err),
 			)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 	}
-
 	var res apiRes
 	baseAddr := sa.cfg.GetBaseAddr()
 	res.Result = baseAddr + "/" + shortURL
 	resBody, err := json.Marshal(&res)
 	if err != nil {
-		logger.Log.Info("/api/shorten marshaling error",
+		logger.Log.Info("path:"+c.Path()+", "+"func:json.Marshal()",
 			zap.Error(err),
 		)
 		c.SendStatus(http.StatusInternalServerError)
@@ -211,14 +212,14 @@ func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
 	defer cancel()
 	err = sa.strg.AddBatchURL(ctx, surls)
 	if err != nil {
-		logger.Log.Info("add batch error",
+		logger.Log.Info("path:"+c.Path()+", "+"func:AddBatchURL()",
 			zap.Error(err),
 		)
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 	resBody, err := json.Marshal(&resBatches)
 	if err != nil {
-		logger.Log.Info("batch marshaling error",
+		logger.Log.Info("path:"+c.Path()+", "+"func:json.Marshal()",
 			zap.Error(err),
 		)
 		c.SendStatus(http.StatusInternalServerError)
@@ -234,7 +235,7 @@ func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
 	if err := storage.DB.PingContext(ctx); err != nil {
-		logger.Log.Info("db ping error",
+		logger.Log.Info("path:"+c.Path()+", "+"func:PingContext()",
 			zap.Error(err),
 		)
 		return c.SendStatus(http.StatusInternalServerError)
