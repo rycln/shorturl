@@ -2,12 +2,14 @@ package storage
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestSimpleStorageAddURL(t *testing.T) {
+func TestFileStorageAddURL(t *testing.T) {
 	type want struct {
 		mustContain map[string]string
 		wantErr     bool
@@ -84,7 +86,10 @@ func TestSimpleStorageAddURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
+			fileName := "test"
+			strg, err := NewFileStorage(fileName)
+			require.NoError(t, err)
+			defer os.Remove(fileName)
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var err error
 				for i := range test.shortURLs {
@@ -95,7 +100,19 @@ func TestSimpleStorageAddURL(t *testing.T) {
 					assert.Error(t, err)
 				}
 				for k, v := range test.want.mustContain {
-					origURL := strg.storage[k]
+					var origURL string
+					fd, err := newFileDecoder(fileName)
+					require.NoError(t, err)
+					defer fd.close()
+					for {
+						surl := &ShortenedURL{}
+						err := fd.decoder.Decode(surl)
+						require.NoError(t, err)
+						if surl.ShortURL == k {
+							origURL = surl.OrigURL
+							break
+						}
+					}
 					if !test.want.wantErr {
 						assert.Equal(t, v, origURL)
 					}
@@ -105,7 +122,7 @@ func TestSimpleStorageAddURL(t *testing.T) {
 	}
 }
 
-func TestSimpleStorageAddBatchURL(t *testing.T) {
+func TestFileStorageAddBatchURL(t *testing.T) {
 	type want struct {
 		mustContain map[string]string
 		wantErr     bool
@@ -138,7 +155,10 @@ func TestSimpleStorageAddBatchURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
+			fileName := "test"
+			strg, err := NewFileStorage(fileName)
+			require.NoError(t, err)
+			defer os.Remove(fileName)
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var surls = make([]ShortenedURL, len(test.shortURLs))
 				var err error
@@ -151,7 +171,19 @@ func TestSimpleStorageAddBatchURL(t *testing.T) {
 					assert.Error(t, err)
 				}
 				for k, v := range test.want.mustContain {
-					origURL := strg.storage[k]
+					var origURL string
+					fd, err := newFileDecoder(fileName)
+					require.NoError(t, err)
+					defer fd.close()
+					for {
+						surl := &ShortenedURL{}
+						err := fd.decoder.Decode(surl)
+						require.NoError(t, err)
+						if surl.ShortURL == k {
+							origURL = surl.OrigURL
+							break
+						}
+					}
 					if !test.want.wantErr {
 						assert.Equal(t, v, origURL)
 					}
@@ -161,7 +193,7 @@ func TestSimpleStorageAddBatchURL(t *testing.T) {
 	}
 }
 
-func TestSimpleStorageGetOrigURL(t *testing.T) {
+func TestFileStorageGetOrigURL(t *testing.T) {
 	type want struct {
 		mustContain map[string]string
 		wantErr     bool
@@ -218,11 +250,16 @@ func TestSimpleStorageGetOrigURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
+			fileName := "test"
+			strg, err := NewFileStorage(fileName)
+			require.NoError(t, err)
+			defer os.Remove(fileName)
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					strg.storage[test.shortURLs[i]] = test.origURLs[i]
+					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					err := strg.encoder.encoder.Encode(&surl)
+					require.NoError(t, err)
 				}
 				for k, v := range test.want.mustContain {
 					origURL, err := strg.GetOrigURL(context.Background(), k)
@@ -240,7 +277,7 @@ func TestSimpleStorageGetOrigURL(t *testing.T) {
 	}
 }
 
-func TestSimpleStorageShortOrigURL(t *testing.T) {
+func TestFileStorageShortOrigURL(t *testing.T) {
 	type want struct {
 		mustContain map[string]string
 		wantErr     bool
@@ -297,11 +334,16 @@ func TestSimpleStorageShortOrigURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
+			fileName := "test"
+			strg, err := NewFileStorage(fileName)
+			require.NoError(t, err)
+			defer os.Remove(fileName)
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					strg.storage[test.shortURLs[i]] = test.origURLs[i]
+					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					err := strg.encoder.encoder.Encode(&surl)
+					require.NoError(t, err)
 				}
 				for k, v := range test.want.mustContain {
 					shortURL, err := strg.GetShortURL(context.Background(), v)
