@@ -295,3 +295,111 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 		})
 	}
 }
+
+func TestServerArgs_ShortenBatch(t *testing.T) {
+	config := &config.Cfg{
+		ServerAddr:    config.DefaultServerAddr,
+		ShortBaseAddr: config.DefaultBaseAddr,
+	}
+
+	app := fiber.New()
+	strg := storage.NewSimpleStorage()
+	sa := NewServerArgs(strg, config)
+	Set(app, sa)
+
+	type want struct {
+		code        int
+		resContains string
+		contentType string
+	}
+	tests := []struct {
+		name   string
+		method string
+		path   string
+		body   []byte
+		want   want
+	}{
+		{
+			name:   "Valid test #1",
+			method: http.MethodPost,
+			path:   "/api/shorten/batch",
+			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
+			want: want{
+				code:        http.StatusCreated,
+				resContains: `"correlation_id":"abc"`,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:   "Wrong method #1",
+			method: http.MethodGet,
+			path:   "/api/shorten/batch",
+			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:   "Wrong URL #1",
+			method: http.MethodPost,
+			path:   "/api/shorten/batc",
+			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:   "Wrong content type #1",
+			method: http.MethodPost,
+			path:   "/api/shorten/batch",
+			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "text/plain",
+			},
+		},
+		{
+			name:   "Wrong JSON #1",
+			method: http.MethodPost,
+			path:   "/api/shorten/batch",
+			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"`),
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:   "Wrong path #1",
+			method: http.MethodPost,
+			path:   "/api/shorten/bad",
+			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "application/json",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bodyReader := bytes.NewReader(test.body)
+			request := httptest.NewRequest(test.method, test.path, bodyReader)
+			request.Header.Set("Content-Type", test.want.contentType)
+
+			res, err := app.Test(request, -1)
+			if err != nil {
+				panic(err)
+			}
+			defer res.Body.Close()
+
+			require.Equal(t, test.want.code, res.StatusCode)
+			if res.StatusCode != http.StatusBadRequest {
+				resBody, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				assert.Contains(t, string(resBody), test.want.resContains)
+				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			}
+		})
+	}
+}
