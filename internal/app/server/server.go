@@ -48,19 +48,11 @@ func StartWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
 }
 
 func StartWithFileStorage(app *fiber.App, cfg *config.Cfg) {
-	fd, err := storage.NewFileDecoder(cfg.GetFilePath())
+	fs, err := storage.NewFileStorage(cfg.GetFilePath())
 	if err != nil {
 		log.Fatalf("Can't open the file: %v", err)
 	}
-	defer fd.Close()
-
-	fe, err := storage.NewFileEncoder(cfg.GetFilePath())
-	if err != nil {
-		log.Fatalf("Can't open the file: %v", err)
-	}
-	defer fe.Close()
-
-	fs := storage.NewFileStorage(fe, fd)
+	defer fs.Close()
 
 	sa := NewServerArgs(fs, cfg)
 	Set(app, sa)
