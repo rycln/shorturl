@@ -10,15 +10,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rycln/shorturl/internal/app/logger"
-	"github.com/rycln/shorturl/internal/app/myhash"
 	"github.com/rycln/shorturl/internal/app/storage"
 	"go.uber.org/zap"
 )
-
-type configer interface {
-	GetBaseAddr() string
-	GetDatabaseDsn() string
-}
 
 type urlAdder interface {
 	AddURL(context.Context, storage.ShortenedURL) error
@@ -35,15 +29,22 @@ type storager interface {
 	urlGetter
 }
 
-type ServerArgs struct {
-	strg storager
-	cfg  configer
+type configer interface {
+	GetBaseAddr() string
+	GetDatabaseDsn() string
 }
 
-func NewServerArgs(strg storager, cfg configer) *ServerArgs {
+type ServerArgs struct {
+	strg     storager
+	cfg      configer
+	hashFunc func(string) string
+}
+
+func NewServerArgs(strg storager, cfg configer, hashFunc func(string) string) *ServerArgs {
 	return &ServerArgs{
-		strg: strg,
-		cfg:  cfg,
+		strg:     strg,
+		cfg:      cfg,
+		hashFunc: hashFunc,
 	}
 }
 
@@ -55,7 +56,7 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 	}
 
 	origURL := body
-	shortURL := myhash.Base62(origURL)
+	shortURL := sa.hashFunc(origURL)
 
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
@@ -128,7 +129,7 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	}
 
 	origURL := req.URL
-	shortURL := myhash.Base62(origURL)
+	shortURL := sa.hashFunc(origURL)
 
 	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
 	defer cancel()
@@ -207,7 +208,7 @@ func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
 		if err != nil {
 			return c.SendStatus(http.StatusBadRequest)
 		}
-		shortURL := myhash.Base62(b.OrigURL)
+		shortURL := sa.hashFunc(b.OrigURL)
 		surls[i] = storage.NewShortenedURL(shortURL, b.OrigURL)
 		resBatches[i] = newBatchRes(b.ID, baseAddr+"/"+shortURL)
 	}

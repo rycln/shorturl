@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
+	"github.com/rycln/shorturl/internal/app/myhash"
 	"github.com/rycln/shorturl/internal/app/storage"
 	"go.uber.org/zap/zapcore"
 )
@@ -38,7 +39,7 @@ func Set(app *fiber.App, sa *ServerArgs) {
 func StartWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
 	strg := storage.NewSimpleStorage()
 
-	sa := NewServerArgs(strg, cfg)
+	sa := NewServerArgs(strg, cfg, myhash.Base62)
 	Set(app, sa)
 
 	err := app.Listen(cfg.GetServerAddr())
@@ -54,7 +55,7 @@ func StartWithFileStorage(app *fiber.App, cfg *config.Cfg) {
 	}
 	defer fs.Close()
 
-	sa := NewServerArgs(fs, cfg)
+	sa := NewServerArgs(fs, cfg, myhash.Base62)
 	Set(app, sa)
 
 	err = app.Listen(cfg.GetServerAddr())
@@ -71,7 +72,7 @@ func StartWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
 	db := storage.NewDatabaseStorage(storage.DB)
 	defer db.Close()
 
-	sa := NewServerArgs(db, cfg)
+	sa := NewServerArgs(db, cfg, myhash.Base62)
 	Set(app, sa)
 
 	err = app.Listen(cfg.GetServerAddr())
