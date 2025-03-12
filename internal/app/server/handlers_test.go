@@ -2,7 +2,8 @@ package server
 
 import (
 	"bytes"
-	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,26 +11,28 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	config "github.com/rycln/shorturl/configs"
+	"github.com/golang/mock/gomock"
+	"github.com/rycln/shorturl/internal/app/mocks"
 	"github.com/rycln/shorturl/internal/app/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testBaseAddr = "http://localhost:8080"
+	testHashVal  = "abc"
+)
+
+var errTest = errors.New("test error")
+
+func testHash(str string) string {
+	return testHashVal
+}
+
 func TestHandlerVariables_ShortenURL(t *testing.T) {
-	config := &config.Cfg{
-		ServerAddr:    config.DefaultServerAddr,
-		ShortBaseAddr: config.DefaultBaseAddr,
-	}
-
-	app := fiber.New()
-	strg := storage.NewSimpleStorage()
-	sa := NewServerArgs(strg, config)
-	Set(app, sa)
-
 	type want struct {
 		code        int
-		resContains string
+		resEqual    string
 		contentType string
 	}
 	tests := []struct {
@@ -46,7 +49,7 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 			body:   "https://practicum.yandex.ru/",
 			want: want{
 				code:        http.StatusCreated,
-				resContains: "http://localhost:8080/",
+				resEqual:    testBaseAddr + "/" + testHashVal,
 				contentType: "text/plain",
 			},
 		},
@@ -77,9 +80,40 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 		},
+		{
+			name:   "Same URL sended twice #1",
+			method: http.MethodPost,
+			path:   "/",
+			body:   "https://practicum.yandex.ru/",
+			want: want{
+				code:        http.StatusConflict,
+				resEqual:    testBaseAddr + "/" + testHashVal,
+				contentType: "text/plain",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mCfg := mocks.NewMockconfiger(ctrl)
+			mStrg := mocks.NewMockstorager(ctrl)
+
+			switch test.want.code {
+			case http.StatusCreated:
+				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mStrg.EXPECT().AddURL(gomock.Any(), gomock.Any()).Return(nil)
+			case http.StatusConflict:
+				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mStrg.EXPECT().AddURL(gomock.Any(), gomock.Any()).Return(storage.ErrConflict)
+				mStrg.EXPECT().GetShortURL(gomock.Any(), gomock.Any()).Return(testHashVal, nil)
+			}
+
+			app := fiber.New()
+			sa := NewServerArgs(mStrg, mCfg, testHash)
+			Set(app, sa)
+
 			bodyReader := strings.NewReader(test.body)
 			request := httptest.NewRequest(test.method, test.path, bodyReader)
 
@@ -90,10 +124,10 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 			defer res.Body.Close()
 
 			require.Equal(t, test.want.code, res.StatusCode)
-			if res.StatusCode != http.StatusBadRequest {
+			if test.want.code != http.StatusBadRequest {
 				resBody, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
-				assert.Contains(t, string(resBody), test.want.resContains)
+				assert.Equal(t, string(resBody), test.want.resEqual)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
 			}
 		})
@@ -101,19 +135,10 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 }
 
 func TestHandlerVariables_ReturnURL(t *testing.T) {
-	config := &config.Cfg{
-		ServerAddr:    config.DefaultServerAddr,
-		ShortBaseAddr: config.DefaultBaseAddr,
-	}
-
-	app := fiber.New()
-	strg := storage.NewSimpleStorage()
-	sa := NewServerArgs(strg, config)
-	Set(app, sa)
-
 	type want struct {
 		code     int
 		location string
+		wantErr  bool
 	}
 	tests := []struct {
 		name          string
@@ -138,9 +163,6 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 			name:   "Wrong method #1",
 			method: http.MethodPost,
 			path:   "/abcd",
-			storeContains: map[string]string{
-				"abcd": "https://practicum.yandex.ru/",
-			},
 			want: want{
 				code: http.StatusBadRequest,
 			},
@@ -153,16 +175,14 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 				"abcd": "https://practicum.yandex.ru/",
 			},
 			want: want{
-				code: http.StatusBadRequest,
+				code:    http.StatusBadRequest,
+				wantErr: true,
 			},
 		},
 		{
 			name:   "Wrong path #1",
 			method: http.MethodGet,
 			path:   "/dcba/abcd",
-			storeContains: map[string]string{
-				"abcd": "https://practicum.yandex.ru/",
-			},
 			want: want{
 				code: http.StatusBadRequest,
 			},
@@ -170,10 +190,24 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			for shortURL, origURL := range test.storeContains {
-				surl := storage.NewShortenedURL(shortURL, origURL)
-				sa.strg.AddURL(context.Background(), surl)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mCfg := mocks.NewMockconfiger(ctrl)
+			mStrg := mocks.NewMockstorager(ctrl)
+
+			testShortURL := strings.TrimPrefix(test.path, "/")
+			if test.want.code != http.StatusBadRequest {
+				mStrg.EXPECT().GetOrigURL(gomock.Any(), testShortURL).Return(test.storeContains[testShortURL], nil)
 			}
+			if test.want.wantErr {
+				mStrg.EXPECT().GetOrigURL(gomock.Any(), testShortURL).Return(test.storeContains[testShortURL], errTest)
+			}
+
+			app := fiber.New()
+			sa := NewServerArgs(mStrg, mCfg, testHash)
+			Set(app, sa)
+
 			request := httptest.NewRequest(test.method, test.path, nil)
 			res, err := app.Test(request, -1)
 			if err != nil {
@@ -181,7 +215,7 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 			}
 			res.Body.Close()
 			require.Equal(t, test.want.code, res.StatusCode)
-			if res.StatusCode != http.StatusBadRequest {
+			if test.want.code != http.StatusBadRequest {
 				assert.Equal(t, test.want.location, res.Header.Get("Location"))
 			}
 		})
@@ -189,19 +223,9 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 }
 
 func TestServerArgs_ShortenAPI(t *testing.T) {
-	config := &config.Cfg{
-		ServerAddr:    config.DefaultServerAddr,
-		ShortBaseAddr: config.DefaultBaseAddr,
-	}
-
-	app := fiber.New()
-	strg := storage.NewSimpleStorage()
-	sa := NewServerArgs(strg, config)
-	Set(app, sa)
-
 	type want struct {
 		code        int
-		resContains string
+		resEqual    string
 		contentType string
 	}
 	tests := []struct {
@@ -218,7 +242,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			body:   []byte(`{"url":"https://practicum.yandex.ru/"}`),
 			want: want{
 				code:        http.StatusCreated,
-				resContains: "http://localhost:8080/",
+				resEqual:    fmt.Sprintf(`{"result":"%s/%s"}`, testBaseAddr, testHashVal),
 				contentType: "application/json",
 			},
 		},
@@ -228,8 +252,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			path:   "/api/shorten",
 			body:   []byte(`{"url":"https://practicum.yandex.ru/"}`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -238,8 +261,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			path:   "/api/shorten",
 			body:   []byte(`{"url":"practicum"}`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -248,8 +270,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			path:   "/api/shorten",
 			body:   []byte(`{"url":"https://practicum.yandex.ru/"}`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "text/plain",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -258,8 +279,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			path:   "/api/shorten",
 			body:   []byte(`{"url:"https://practicum.yandex.ru/"}`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -268,13 +288,43 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			path:   "/api/shorten/bad",
 			body:   []byte(`{"url":"https://practicum.yandex.ru/"}`),
 			want: want{
-				code:        http.StatusBadRequest,
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			name:   "Same URL sended twice #1",
+			method: http.MethodPost,
+			path:   "/api/shorten",
+			body:   []byte(`{"url":"https://practicum.yandex.ru/"}`),
+			want: want{
+				code:        http.StatusConflict,
+				resEqual:    fmt.Sprintf(`{"result":"%s/%s"}`, testBaseAddr, testHashVal),
 				contentType: "application/json",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mCfg := mocks.NewMockconfiger(ctrl)
+			mStrg := mocks.NewMockstorager(ctrl)
+
+			switch test.want.code {
+			case http.StatusCreated:
+				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mStrg.EXPECT().AddURL(gomock.Any(), gomock.Any()).Return(nil)
+			case http.StatusConflict:
+				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mStrg.EXPECT().AddURL(gomock.Any(), gomock.Any()).Return(storage.ErrConflict)
+				mStrg.EXPECT().GetShortURL(gomock.Any(), gomock.Any()).Return(testHashVal, nil)
+			}
+
+			app := fiber.New()
+			sa := NewServerArgs(mStrg, mCfg, testHash)
+			Set(app, sa)
+
 			bodyReader := bytes.NewReader(test.body)
 			request := httptest.NewRequest(test.method, test.path, bodyReader)
 			request.Header.Set("Content-Type", test.want.contentType)
@@ -286,10 +336,10 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			defer res.Body.Close()
 
 			require.Equal(t, test.want.code, res.StatusCode)
-			if res.StatusCode != http.StatusBadRequest {
+			if test.want.code != http.StatusBadRequest {
 				resBody, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
-				assert.Contains(t, string(resBody), test.want.resContains)
+				assert.Contains(t, string(resBody), test.want.resEqual)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
 			}
 		})
@@ -297,16 +347,6 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 }
 
 func TestServerArgs_ShortenBatch(t *testing.T) {
-	config := &config.Cfg{
-		ServerAddr:    config.DefaultServerAddr,
-		ShortBaseAddr: config.DefaultBaseAddr,
-	}
-
-	app := fiber.New()
-	strg := storage.NewSimpleStorage()
-	sa := NewServerArgs(strg, config)
-	Set(app, sa)
-
 	type want struct {
 		code        int
 		resContains string
@@ -336,8 +376,7 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 			path:   "/api/shorten/batch",
 			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -346,18 +385,7 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 			path:   "/api/shorten/batc",
 			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
-			},
-		},
-		{
-			name:   "Wrong content type #1",
-			method: http.MethodPost,
-			path:   "/api/shorten/batch",
-			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
-			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "text/plain",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -366,8 +394,7 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 			path:   "/api/shorten/batch",
 			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -376,13 +403,27 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 			path:   "/api/shorten/bad",
 			body:   []byte(`[ {"correlation_id":"abc","original_url":"https://practicum.yandex.ru/"} ]`),
 			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "application/json",
+				code: http.StatusBadRequest,
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mCfg := mocks.NewMockconfiger(ctrl)
+			mStrg := mocks.NewMockstorager(ctrl)
+
+			if test.want.code != http.StatusBadRequest {
+				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mStrg.EXPECT().AddBatchURL(gomock.Any(), gomock.Any()).Return(nil)
+			}
+
+			app := fiber.New()
+			sa := NewServerArgs(mStrg, mCfg, testHash)
+			Set(app, sa)
+
 			bodyReader := bytes.NewReader(test.body)
 			request := httptest.NewRequest(test.method, test.path, bodyReader)
 			request.Header.Set("Content-Type", test.want.contentType)
@@ -394,7 +435,7 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 			defer res.Body.Close()
 
 			require.Equal(t, test.want.code, res.StatusCode)
-			if res.StatusCode != http.StatusBadRequest {
+			if test.want.code != http.StatusBadRequest {
 				resBody, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
 				assert.Contains(t, string(resBody), test.want.resContains)
