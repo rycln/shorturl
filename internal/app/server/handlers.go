@@ -29,10 +29,18 @@ type storager interface {
 	urlGetter
 }
 
-type configer interface {
+type cfgAddresser interface {
 	GetBaseAddr() string
 	GetDatabaseDsn() string
+}
+
+type cfgTimeouter interface {
 	TimeoutDuration() time.Duration
+}
+
+type configer interface {
+	cfgAddresser
+	cfgTimeouter
 }
 
 type ServerArgs struct {

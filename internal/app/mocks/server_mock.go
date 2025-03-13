@@ -198,6 +198,94 @@ func (mr *MockstoragerMockRecorder) GetShortURL(arg0, arg1 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortURL", reflect.TypeOf((*Mockstorager)(nil).GetShortURL), arg0, arg1)
 }
 
+// MockcfgAddresser is a mock of cfgAddresser interface.
+type MockcfgAddresser struct {
+	ctrl     *gomock.Controller
+	recorder *MockcfgAddresserMockRecorder
+}
+
+// MockcfgAddresserMockRecorder is the mock recorder for MockcfgAddresser.
+type MockcfgAddresserMockRecorder struct {
+	mock *MockcfgAddresser
+}
+
+// NewMockcfgAddresser creates a new mock instance.
+func NewMockcfgAddresser(ctrl *gomock.Controller) *MockcfgAddresser {
+	mock := &MockcfgAddresser{ctrl: ctrl}
+	mock.recorder = &MockcfgAddresserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcfgAddresser) EXPECT() *MockcfgAddresserMockRecorder {
+	return m.recorder
+}
+
+// GetBaseAddr mocks base method.
+func (m *MockcfgAddresser) GetBaseAddr() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBaseAddr")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetBaseAddr indicates an expected call of GetBaseAddr.
+func (mr *MockcfgAddresserMockRecorder) GetBaseAddr() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBaseAddr", reflect.TypeOf((*MockcfgAddresser)(nil).GetBaseAddr))
+}
+
+// GetDatabaseDsn mocks base method.
+func (m *MockcfgAddresser) GetDatabaseDsn() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDatabaseDsn")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetDatabaseDsn indicates an expected call of GetDatabaseDsn.
+func (mr *MockcfgAddresserMockRecorder) GetDatabaseDsn() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatabaseDsn", reflect.TypeOf((*MockcfgAddresser)(nil).GetDatabaseDsn))
+}
+
+// MockcfgTimeouter is a mock of cfgTimeouter interface.
+type MockcfgTimeouter struct {
+	ctrl     *gomock.Controller
+	recorder *MockcfgTimeouterMockRecorder
+}
+
+// MockcfgTimeouterMockRecorder is the mock recorder for MockcfgTimeouter.
+type MockcfgTimeouterMockRecorder struct {
+	mock *MockcfgTimeouter
+}
+
+// NewMockcfgTimeouter creates a new mock instance.
+func NewMockcfgTimeouter(ctrl *gomock.Controller) *MockcfgTimeouter {
+	mock := &MockcfgTimeouter{ctrl: ctrl}
+	mock.recorder = &MockcfgTimeouterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcfgTimeouter) EXPECT() *MockcfgTimeouterMockRecorder {
+	return m.recorder
+}
+
+// TimeoutDuration mocks base method.
+func (m *MockcfgTimeouter) TimeoutDuration() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TimeoutDuration")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// TimeoutDuration indicates an expected call of TimeoutDuration.
+func (mr *MockcfgTimeouterMockRecorder) TimeoutDuration() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TimeoutDuration", reflect.TypeOf((*MockcfgTimeouter)(nil).TimeoutDuration))
+}
+
 // Mockconfiger is a mock of configer interface.
 type Mockconfiger struct {
 	ctrl     *gomock.Controller
