@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/timeout"
 	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
@@ -21,11 +22,11 @@ func Set(app *fiber.App, sa *ServerArgs) {
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
 
-	app.Post("/api/shorten/batch", sa.ShortenBatch)
-	app.Post("/api/shorten", sa.ShortenAPI)
-	app.Get("/ping", sa.PingDB)
-	app.Get("/:short", sa.ReturnURL)
-	app.Post("/", sa.ShortenURL)
+	app.Post("/api/shorten/batch", timeout.NewWithContext(sa.ShortenBatch, sa.cfg.TimeoutDuration()))
+	app.Post("/api/shorten", timeout.NewWithContext(sa.ShortenAPI, sa.cfg.TimeoutDuration()))
+	app.Get("/ping", timeout.NewWithContext(sa.PingDB, sa.cfg.TimeoutDuration()))
+	app.Get("/:short", timeout.NewWithContext(sa.ReturnURL, sa.cfg.TimeoutDuration()))
+	app.Post("/", timeout.NewWithContext(sa.ShortenURL, sa.cfg.TimeoutDuration()))
 
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,

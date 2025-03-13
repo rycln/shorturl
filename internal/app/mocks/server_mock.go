@@ -7,61 +7,11 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	storage "github.com/rycln/shorturl/internal/app/storage"
 )
-
-// Mockconfiger is a mock of configer interface.
-type Mockconfiger struct {
-	ctrl     *gomock.Controller
-	recorder *MockconfigerMockRecorder
-}
-
-// MockconfigerMockRecorder is the mock recorder for Mockconfiger.
-type MockconfigerMockRecorder struct {
-	mock *Mockconfiger
-}
-
-// NewMockconfiger creates a new mock instance.
-func NewMockconfiger(ctrl *gomock.Controller) *Mockconfiger {
-	mock := &Mockconfiger{ctrl: ctrl}
-	mock.recorder = &MockconfigerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockconfiger) EXPECT() *MockconfigerMockRecorder {
-	return m.recorder
-}
-
-// GetBaseAddr mocks base method.
-func (m *Mockconfiger) GetBaseAddr() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBaseAddr")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetBaseAddr indicates an expected call of GetBaseAddr.
-func (mr *MockconfigerMockRecorder) GetBaseAddr() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBaseAddr", reflect.TypeOf((*Mockconfiger)(nil).GetBaseAddr))
-}
-
-// GetDatabaseDsn mocks base method.
-func (m *Mockconfiger) GetDatabaseDsn() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDatabaseDsn")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetDatabaseDsn indicates an expected call of GetDatabaseDsn.
-func (mr *MockconfigerMockRecorder) GetDatabaseDsn() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatabaseDsn", reflect.TypeOf((*Mockconfiger)(nil).GetDatabaseDsn))
-}
 
 // MockurlAdder is a mock of urlAdder interface.
 type MockurlAdder struct {
@@ -246,4 +196,69 @@ func (m *Mockstorager) GetShortURL(arg0 context.Context, arg1 string) (string, e
 func (mr *MockstoragerMockRecorder) GetShortURL(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortURL", reflect.TypeOf((*Mockstorager)(nil).GetShortURL), arg0, arg1)
+}
+
+// Mockconfiger is a mock of configer interface.
+type Mockconfiger struct {
+	ctrl     *gomock.Controller
+	recorder *MockconfigerMockRecorder
+}
+
+// MockconfigerMockRecorder is the mock recorder for Mockconfiger.
+type MockconfigerMockRecorder struct {
+	mock *Mockconfiger
+}
+
+// NewMockconfiger creates a new mock instance.
+func NewMockconfiger(ctrl *gomock.Controller) *Mockconfiger {
+	mock := &Mockconfiger{ctrl: ctrl}
+	mock.recorder = &MockconfigerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockconfiger) EXPECT() *MockconfigerMockRecorder {
+	return m.recorder
+}
+
+// GetBaseAddr mocks base method.
+func (m *Mockconfiger) GetBaseAddr() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBaseAddr")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetBaseAddr indicates an expected call of GetBaseAddr.
+func (mr *MockconfigerMockRecorder) GetBaseAddr() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBaseAddr", reflect.TypeOf((*Mockconfiger)(nil).GetBaseAddr))
+}
+
+// GetDatabaseDsn mocks base method.
+func (m *Mockconfiger) GetDatabaseDsn() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDatabaseDsn")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetDatabaseDsn indicates an expected call of GetDatabaseDsn.
+func (mr *MockconfigerMockRecorder) GetDatabaseDsn() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatabaseDsn", reflect.TypeOf((*Mockconfiger)(nil).GetDatabaseDsn))
+}
+
+// TimeoutDuration mocks base method.
+func (m *Mockconfiger) TimeoutDuration() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TimeoutDuration")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// TimeoutDuration indicates an expected call of TimeoutDuration.
+func (mr *MockconfigerMockRecorder) TimeoutDuration() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TimeoutDuration", reflect.TypeOf((*Mockconfiger)(nil).TimeoutDuration))
 }

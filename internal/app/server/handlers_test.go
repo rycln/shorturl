@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang/mock/gomock"
@@ -19,8 +20,9 @@ import (
 )
 
 const (
-	testBaseAddr = "http://localhost:8080"
-	testHashVal  = "abc"
+	testBaseAddr        = "http://localhost:8080"
+	testHashVal         = "abc"
+	testTimeoutDuration = time.Duration(2) * time.Second
 )
 
 var errTest = errors.New("test error")
@@ -100,6 +102,7 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 			mCfg := mocks.NewMockconfiger(ctrl)
 			mStrg := mocks.NewMockstorager(ctrl)
 
+			mCfg.EXPECT().TimeoutDuration().Return(testTimeoutDuration).AnyTimes()
 			switch test.want.code {
 			case http.StatusCreated:
 				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
@@ -196,6 +199,7 @@ func TestHandlerVariables_ReturnURL(t *testing.T) {
 			mCfg := mocks.NewMockconfiger(ctrl)
 			mStrg := mocks.NewMockstorager(ctrl)
 
+			mCfg.EXPECT().TimeoutDuration().Return(testTimeoutDuration).AnyTimes()
 			testShortURL := strings.TrimPrefix(test.path, "/")
 			if test.want.code != http.StatusBadRequest {
 				mStrg.EXPECT().GetOrigURL(gomock.Any(), testShortURL).Return(test.storeContains[testShortURL], nil)
@@ -311,6 +315,7 @@ func TestServerArgs_ShortenAPI(t *testing.T) {
 			mCfg := mocks.NewMockconfiger(ctrl)
 			mStrg := mocks.NewMockstorager(ctrl)
 
+			mCfg.EXPECT().TimeoutDuration().Return(testTimeoutDuration).AnyTimes()
 			switch test.want.code {
 			case http.StatusCreated:
 				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
@@ -415,6 +420,7 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 			mCfg := mocks.NewMockconfiger(ctrl)
 			mStrg := mocks.NewMockstorager(ctrl)
 
+			mCfg.EXPECT().TimeoutDuration().Return(testTimeoutDuration).AnyTimes()
 			if test.want.code != http.StatusBadRequest {
 				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
 				mStrg.EXPECT().AddBatchURL(gomock.Any(), gomock.Any()).Return(nil)

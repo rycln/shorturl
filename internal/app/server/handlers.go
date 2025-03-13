@@ -32,6 +32,7 @@ type storager interface {
 type configer interface {
 	GetBaseAddr() string
 	GetDatabaseDsn() string
+	TimeoutDuration() time.Duration
 }
 
 type ServerArgs struct {
@@ -58,19 +59,13 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 	origURL := body
 	shortURL := sa.hashFunc(origURL)
 
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-
 	status := http.StatusCreated
 	surl := storage.NewShortenedURL(shortURL, origURL)
-	err = sa.strg.AddURL(ctx, surl)
+	err = sa.strg.AddURL(c.UserContext(), surl)
 	if err != nil {
 		if errors.Is(err, storage.ErrConflict) {
-			ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-			defer cancel()
-
 			var err error
-			shortURL, err = sa.strg.GetShortURL(ctx, origURL)
+			shortURL, err = sa.strg.GetShortURL(c.UserContext(), origURL)
 			if err != nil {
 				logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
 					zap.Error(err),
@@ -93,10 +88,7 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 	shortURL := c.Params("short")
 
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-
-	origURL, err := sa.strg.GetOrigURL(ctx, shortURL)
+	origURL, err := sa.strg.GetOrigURL(c.UserContext(), shortURL)
 	if err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}
@@ -131,19 +123,13 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	origURL := req.URL
 	shortURL := sa.hashFunc(origURL)
 
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-
 	status := http.StatusCreated
 	surl := storage.NewShortenedURL(shortURL, origURL)
-	err = sa.strg.AddURL(ctx, surl)
+	err = sa.strg.AddURL(c.UserContext(), surl)
 	if err != nil {
 		if errors.Is(err, storage.ErrConflict) {
-			ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-			defer cancel()
-
 			var err error
-			shortURL, err = sa.strg.GetShortURL(ctx, origURL)
+			shortURL, err = sa.strg.GetShortURL(c.UserContext(), origURL)
 			if err != nil {
 				logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
 					zap.Error(err),
@@ -213,9 +199,7 @@ func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
 		resBatches[i] = newBatchRes(b.ID, baseAddr+"/"+shortURL)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-	err = sa.strg.AddBatchURL(ctx, surls)
+	err = sa.strg.AddBatchURL(c.UserContext(), surls)
 	if err != nil {
 		logger.Log.Info("path:"+c.Path()+", "+"func:AddBatchURL()",
 			zap.Error(err),
@@ -237,9 +221,7 @@ func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
 	if sa.cfg.GetDatabaseDsn() == "" {
 		return c.SendStatus(http.StatusBadRequest)
 	}
-	ctx, cancel := context.WithTimeout(c.Context(), 1*time.Second)
-	defer cancel()
-	if err := storage.DB.PingContext(ctx); err != nil {
+	if err := storage.DB.PingContext(c.UserContext()); err != nil {
 		logger.Log.Info("path:"+c.Path()+", "+"func:PingContext()",
 			zap.Error(err),
 		)
