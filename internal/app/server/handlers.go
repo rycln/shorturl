@@ -67,41 +67,29 @@ func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
 	origURL := body
 	shortURL := sa.hashFunc(origURL)
 
-	status := http.StatusCreated
+	baseAddr := sa.cfg.GetBaseAddr()
 	surl := storage.NewShortenedURL(shortURL, origURL)
 	err = sa.strg.AddURL(c.UserContext(), surl)
-	if err != nil {
-		if errors.Is(err, storage.ErrConflict) {
-			var err error
-			shortURL, err = sa.strg.GetShortURL(c.UserContext(), origURL)
-			if err != nil {
-				logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
-					zap.Error(err),
-				)
-				return c.SendStatus(http.StatusInternalServerError)
-			}
-			status = http.StatusConflict
-		} else {
-			logger.Log.Info("path:"+c.Path()+", "+"func:AddURL()",
+	if err == nil {
+		c.Set("Content-Type", "text/plain")
+		return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
+	}
+	if errors.Is(err, storage.ErrConflict) {
+		var err error
+		shortURL, err = sa.strg.GetShortURL(c.UserContext(), origURL)
+		if err != nil {
+			logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
 				zap.Error(err),
 			)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
+		c.Set("Content-Type", "text/plain")
+		return c.Status(http.StatusConflict).SendString(baseAddr + "/" + shortURL)
 	}
-	c.Set("Content-Type", "text/plain")
-	baseAddr := sa.cfg.GetBaseAddr()
-	return c.Status(status).SendString(baseAddr + "/" + shortURL)
-}
-
-func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
-	shortURL := c.Params("short")
-
-	origURL, err := sa.strg.GetOrigURL(c.UserContext(), shortURL)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-	c.Set("Location", origURL)
-	return c.SendStatus(http.StatusTemporaryRedirect)
+	logger.Log.Info("path:"+c.Path()+", "+"func:AddURL()",
+		zap.Error(err),
+	)
+	return c.SendStatus(http.StatusInternalServerError)
 }
 
 type apiReq struct {
@@ -131,39 +119,46 @@ func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
 	origURL := req.URL
 	shortURL := sa.hashFunc(origURL)
 
-	status := http.StatusCreated
+	var res apiRes
+	baseAddr := sa.cfg.GetBaseAddr()
 	surl := storage.NewShortenedURL(shortURL, origURL)
 	err = sa.strg.AddURL(c.UserContext(), surl)
-	if err != nil {
-		if errors.Is(err, storage.ErrConflict) {
-			var err error
-			shortURL, err = sa.strg.GetShortURL(c.UserContext(), origURL)
-			if err != nil {
-				logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
-					zap.Error(err),
-				)
-				return c.SendStatus(http.StatusInternalServerError)
-			}
-			status = http.StatusConflict
-		} else {
-			logger.Log.Info("path:"+c.Path()+", "+"func:AddURL()",
+	if err == nil {
+		res.Result = baseAddr + "/" + shortURL
+		resBody, err := json.Marshal(&res)
+		if err != nil {
+			logger.Log.Info("path:"+c.Path()+", "+"func:json.Marshal()",
+				zap.Error(err),
+			)
+			c.SendStatus(http.StatusInternalServerError)
+		}
+		c.Set("Content-Type", "application/json")
+		return c.Status(http.StatusCreated).Send(resBody)
+	}
+	if errors.Is(err, storage.ErrConflict) {
+		var err error
+		shortURL, err = sa.strg.GetShortURL(c.UserContext(), origURL)
+		if err != nil {
+			logger.Log.Info("path:"+c.Path()+", "+"func:GetShortURL()",
 				zap.Error(err),
 			)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
+		res.Result = baseAddr + "/" + shortURL
+		resBody, err := json.Marshal(&res)
+		if err != nil {
+			logger.Log.Info("path:"+c.Path()+", "+"func:json.Marshal()",
+				zap.Error(err),
+			)
+			c.SendStatus(http.StatusInternalServerError)
+		}
+		c.Set("Content-Type", "application/json")
+		return c.Status(http.StatusConflict).Send(resBody)
 	}
-	var res apiRes
-	baseAddr := sa.cfg.GetBaseAddr()
-	res.Result = baseAddr + "/" + shortURL
-	resBody, err := json.Marshal(&res)
-	if err != nil {
-		logger.Log.Info("path:"+c.Path()+", "+"func:json.Marshal()",
-			zap.Error(err),
-		)
-		c.SendStatus(http.StatusInternalServerError)
-	}
-	c.Set("Content-Type", "application/json")
-	return c.Status(status).Send(resBody)
+	logger.Log.Info("path:"+c.Path()+", "+"func:AddURL()",
+		zap.Error(err),
+	)
+	return c.SendStatus(http.StatusInternalServerError)
 }
 
 type batchReq struct {
@@ -223,6 +218,17 @@ func (sa *ServerArgs) ShortenBatch(c *fiber.Ctx) error {
 	}
 	c.Set("Content-Type", "application/json")
 	return c.Status(http.StatusCreated).Send(resBody)
+}
+
+func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
+	shortURL := c.Params("short")
+
+	origURL, err := sa.strg.GetOrigURL(c.UserContext(), shortURL)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+	c.Set("Location", origURL)
+	return c.SendStatus(http.StatusTemporaryRedirect)
 }
 
 func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
