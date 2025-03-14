@@ -93,3 +93,7 @@ func (fs *FileStorage) getFromFile(ctx context.Context, url string) (*ShortenedU
 		}
 	}
 }
+
+func (fs *FileStorage) Ping(ctx context.Context) error {
+	return ErrNotDatabase
+}

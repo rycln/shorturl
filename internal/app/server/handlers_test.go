@@ -31,7 +31,7 @@ func testHash(str string) string {
 	return testHashVal
 }
 
-func TestHandlerVariables_ShortenURL(t *testing.T) {
+func TestServerArgs_ShortenURL(t *testing.T) {
 	type want struct {
 		code        int
 		resEqual    string
@@ -137,7 +137,7 @@ func TestHandlerVariables_ShortenURL(t *testing.T) {
 	}
 }
 
-func TestHandlerVariables_ReturnURL(t *testing.T) {
+func TestServerArgs_ReturnURL(t *testing.T) {
 	type want struct {
 		code     int
 		location string
@@ -447,6 +447,88 @@ func TestServerArgs_ShortenBatch(t *testing.T) {
 				assert.Contains(t, string(resBody), test.want.resContains)
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
 			}
+		})
+	}
+}
+
+func TestServerArgs_PingDB(t *testing.T) {
+	type want struct {
+		code    int
+		wantErr bool
+	}
+	tests := []struct {
+		name   string
+		method string
+		path   string
+		want   want
+	}{
+		{
+			name:   "Valid test #1",
+			method: http.MethodGet,
+			path:   "/ping",
+			want: want{
+				code:    http.StatusOK,
+				wantErr: false,
+			},
+		},
+		{
+			name:   "Wrong method #1",
+			method: http.MethodPost,
+			path:   "/ping",
+			want: want{
+				code:    http.StatusBadRequest,
+				wantErr: false,
+			},
+		},
+		{
+			name:   "Wrong path #1",
+			method: http.MethodPost,
+			path:   "/pin",
+			want: want{
+				code:    http.StatusBadRequest,
+				wantErr: false,
+			},
+		},
+		{
+			name:   "Ping failed #1",
+			method: http.MethodGet,
+			path:   "/ping",
+			want: want{
+				code:    http.StatusInternalServerError,
+				wantErr: true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mCfg := mocks.NewMockconfiger(ctrl)
+			mStrg := mocks.NewMockstorager(ctrl)
+
+			mCfg.EXPECT().TimeoutDuration().Return(testTimeoutDuration).AnyTimes()
+			if test.want.code != http.StatusBadRequest {
+				if !test.want.wantErr {
+					mStrg.EXPECT().Ping(gomock.Any()).Return(nil)
+				} else {
+					mStrg.EXPECT().Ping(gomock.Any()).Return(errTest)
+				}
+			}
+
+			app := fiber.New()
+			sa := NewServerArgs(mStrg, mCfg, testHash)
+			Set(app, sa)
+
+			request := httptest.NewRequest(test.method, test.path, nil)
+
+			res, err := app.Test(request, -1)
+			if err != nil {
+				panic(err)
+			}
+			defer res.Body.Close()
+
+			require.Equal(t, test.want.code, res.StatusCode)
 		})
 	}
 }

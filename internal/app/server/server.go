@@ -66,14 +66,20 @@ func StartWithFileStorage(app *fiber.App, cfg *config.Cfg) {
 }
 
 func StartWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
-	err := storage.DBInitPostgre(cfg.GetDatabaseDsn())
+	db, err := storage.NewDB(cfg.GetDatabaseDsn())
 	if err != nil {
 		log.Fatalf("Can't open database: %v", err)
 	}
-	db := storage.NewDatabaseStorage(storage.DB)
 	defer db.Close()
 
-	sa := NewServerArgs(db, cfg, myhash.Base62)
+	err = storage.InitDB(db, cfg.TimeoutDuration())
+	if err != nil {
+		log.Fatalf("Can't init database: %v", err)
+	}
+
+	sdb := storage.NewDatabaseStorage(db)
+
+	sa := NewServerArgs(sdb, cfg, myhash.Base62)
 	Set(app, sa)
 
 	err = app.Listen(cfg.GetServerAddr())

@@ -24,9 +24,14 @@ type urlGetter interface {
 	GetShortURL(context.Context, string) (string, error)
 }
 
+type pinger interface {
+	Ping(context.Context) error
+}
+
 type storager interface {
 	urlAdder
 	urlGetter
+	pinger
 }
 
 type cfgAddresser interface {
@@ -232,10 +237,8 @@ func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
 }
 
 func (sa *ServerArgs) PingDB(c *fiber.Ctx) error {
-	if sa.cfg.GetDatabaseDsn() == "" {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-	if err := storage.DB.PingContext(c.UserContext()); err != nil {
+	err := sa.strg.Ping(c.UserContext())
+	if err != nil {
 		logger.Log.Info("path:"+c.Path()+", "+"func:PingContext()",
 			zap.Error(err),
 		)

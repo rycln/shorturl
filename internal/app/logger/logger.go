@@ -4,6 +4,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// для логгера приемлимо использовать глобальную переменную?
 var Log *zap.Logger = zap.NewNop()
 
 func LogInit() error {

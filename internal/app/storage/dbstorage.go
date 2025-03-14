@@ -11,20 +11,32 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-var DB *sql.DB
+const (
+	maxOpenConns    = 0 //unlimited
+	maxIdleConns    = 10
+	maxIdleTime     = time.Duration(3) * time.Minute
+	maxConnLifetime = 0 //unlimited
+)
 
-func DBInitPostgre(databaseDsn string) error {
-	var err error
-	DB, err = sql.Open("pgx", databaseDsn)
+func NewDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	return db, nil
+}
+
+func InitDB(db *sql.DB, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	_, err = DB.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS urls (short_url VARCHAR(7), original_url TEXT UNIQUE)")
+	_, err := db.ExecContext(ctx, sqlCreateURLsTable)
 	if err != nil {
 		return err
 	}
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxIdleTime(maxIdleTime)
+	db.SetConnMaxLifetime(maxConnLifetime)
 	return nil
 }
 
@@ -38,16 +50,12 @@ func NewDatabaseStorage(db *sql.DB) *DatabaseStorage {
 	}
 }
 
-func (dbs *DatabaseStorage) Close() error {
-	return dbs.db.Close()
-}
-
 func (dbs *DatabaseStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
 	tx, err := dbs.db.Begin()
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES ($1, $2)", surl.ShortURL, surl.OrigURL)
+	_, err = tx.ExecContext(ctx, sqlInsertURL, surl.ShortURL, surl.OrigURL)
 	if err != nil {
 		tx.Rollback()
 		var pgErr *pgconn.PgError
@@ -65,7 +73,7 @@ func (dbs *DatabaseStorage) AddBatchURL(ctx context.Context, surls []ShortenedUR
 		return err
 	}
 	for _, surl := range surls {
-		_, err := tx.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES ($1, $2)", surl.ShortURL, surl.OrigURL)
+		_, err := tx.ExecContext(ctx, sqlInsertURL, surl.ShortURL, surl.OrigURL)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -75,7 +83,7 @@ func (dbs *DatabaseStorage) AddBatchURL(ctx context.Context, surls []ShortenedUR
 }
 
 func (dbs *DatabaseStorage) GetOrigURL(ctx context.Context, shortURL string) (string, error) {
-	row := dbs.db.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url = $1", shortURL)
+	row := dbs.db.QueryRowContext(ctx, sqlGetOrigURL, shortURL)
 	var origURL string
 	err := row.Scan(&origURL)
 	if err != nil {
@@ -85,11 +93,18 @@ func (dbs *DatabaseStorage) GetOrigURL(ctx context.Context, shortURL string) (st
 }
 
 func (dbs *DatabaseStorage) GetShortURL(ctx context.Context, origURL string) (string, error) {
-	row := dbs.db.QueryRowContext(ctx, "SELECT short_url FROM urls WHERE original_url = $1", origURL)
+	row := dbs.db.QueryRowContext(ctx, sqlGetShortURL, origURL)
 	var shortURL string
 	err := row.Scan(&shortURL)
 	if err != nil {
 		return "", err
 	}
 	return shortURL, nil
+}
+
+func (dbs *DatabaseStorage) Ping(ctx context.Context) error {
+	if err := dbs.db.PingContext(ctx); err != nil {
+		return err
+	}
+	return nil
 }

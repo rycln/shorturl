@@ -53,3 +53,7 @@ func (ss SimpleStorage) GetShortURL(ctx context.Context, origURL string) (string
 	}
 	return "", ErrNotExist
 }
+
+func (ss SimpleStorage) Ping(ctx context.Context) error {
+	return ErrNotDatabase
+}
