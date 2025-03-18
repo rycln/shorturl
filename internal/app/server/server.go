@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func Set(app *fiber.App, sa *ServerArgs) {
+func Set(app *fiber.App, strg any) {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Log,
 		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
@@ -41,7 +41,6 @@ func StartWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
 	strg := storage.NewSimpleStorage()
 
 	sa := NewServerArgs(strg, cfg, myhash.Base62)
-	Set(app, sa)
 
 	err := app.Listen(cfg.GetServerAddr())
 	if err != nil {

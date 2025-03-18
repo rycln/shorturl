@@ -23,14 +23,16 @@ func main() {
 		zap.String("base_url", cfg.GetBaseAddr()),
 		zap.String("storage", cfg.StorageIs()),
 	)
+
 	app := fiber.New()
 
+	var strg any
 	switch cfg.StorageIs() {
 	case "db":
 		logger.Log.Info("Storage configuration",
 			zap.String("db_dsn", cfg.GetDatabaseDsn()),
 		)
-		server.StartWithDatabaseStorage(app, cfg)
+		strg = storage.
 	case "file":
 		logger.Log.Info("Storage configuration",
 			zap.String("file_path", cfg.GetFilePath()),
