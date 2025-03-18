@@ -21,7 +21,7 @@ func NewRetrieve(strg retrieveStorager) *Retrieve {
 	}
 }
 
-func (r *Retrieve) RetrieveURL(c *fiber.Ctx) error {
+func (r *Retrieve) Handle(c *fiber.Ctx) error {
 	shortURL := c.Params("short")
 
 	origURL, err := r.strg.GetOrigURL(c.UserContext(), shortURL)

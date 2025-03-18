@@ -23,7 +23,7 @@ func NewPing(strg pingStorager) *Ping {
 	}
 }
 
-func (p *Ping) PingDB(c *fiber.Ctx) error {
+func (p *Ping) Handle(c *fiber.Ctx) error {
 	err := p.strg.Ping(c.UserContext())
 	if err != nil {
 		logger.Log.Info("path:"+c.Path()+", "+"func:PingContext()",

@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
-	"github.com/rycln/shorturl/internal/app/server"
 	"go.uber.org/zap"
 )
 
@@ -26,19 +25,18 @@ func main() {
 
 	app := fiber.New()
 
-	var strg any
 	switch cfg.StorageIs() {
 	case "db":
 		logger.Log.Info("Storage configuration",
 			zap.String("db_dsn", cfg.GetDatabaseDsn()),
 		)
-		strg = storage.
+		startWithDatabaseStorage(app, cfg)
 	case "file":
 		logger.Log.Info("Storage configuration",
 			zap.String("file_path", cfg.GetFilePath()),
 		)
-		server.StartWithFileStorage(app, cfg)
+		startWithFileStorage(app, cfg)
 	default:
-		server.StartWithSimpleStorage(app, cfg)
+		startWithSimpleStorage(app, cfg)
 	}
 }

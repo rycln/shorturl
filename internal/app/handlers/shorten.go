@@ -35,7 +35,7 @@ func NewShorten(strg shortenStorager, cfg shortenConfiger, hashFunc func(string)
 	}
 }
 
-func (s *Shorten) ShortenURL(c *fiber.Ctx) error {
+func (s *Shorten) Handle(c *fiber.Ctx) error {
 	body := string(c.Body())
 	_, err := url.ParseRequestURI(body)
 	if err != nil {

@@ -51,7 +51,7 @@ func newBatchRes(id, shortURL string) batchRes {
 	}
 }
 
-func (sb *ShortenBatch) ShortenBatchURL(c *fiber.Ctx) error {
+func (sb *ShortenBatch) Handle(c *fiber.Ctx) error {
 	if !c.Is("json") {
 		return c.SendStatus(http.StatusBadRequest)
 	}

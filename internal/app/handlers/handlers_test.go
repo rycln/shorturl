@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/timeout"
 	"github.com/golang/mock/gomock"
 	"github.com/rycln/shorturl/internal/app/mocks"
 	"github.com/rycln/shorturl/internal/app/storage"
@@ -114,6 +115,7 @@ func TestServerArgs_ShortenURL(t *testing.T) {
 			}
 
 			app := fiber.New()
+			app.Post("/", timeout.NewWithContext(shorten.Handle, to))
 			sa := NewServerArgs(mStrg, mCfg, testHash)
 			Set(app, sa)
 

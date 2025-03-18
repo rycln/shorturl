@@ -44,7 +44,7 @@ type apiRes struct {
 	Result string `json:"result"`
 }
 
-func (as *APIShorten) APIShortenURL(c *fiber.Ctx) error {
+func (as *APIShorten) Handle(c *fiber.Ctx) error {
 	if !c.Is("json") {
 		return c.SendStatus(http.StatusBadRequest)
 	}
