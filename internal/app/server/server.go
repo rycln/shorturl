@@ -1,124 +1,19 @@
 package server
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/timeout"
+	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/myhash"
 	"github.com/rycln/shorturl/internal/app/storage"
 	"go.uber.org/zap/zapcore"
 )
-
-type configer interface {
-	GetBaseAddr() string
-}
-
-type storager interface {
-	AddURL(string, string) bool
-	GetURL(string) (string, error)
-}
-
-type fileWriter interface {
-	WriteInto(*storage.StoredURL) error
-}
-
-type ServerArgs struct {
-	storage    storager
-	config     configer
-	fileWriter fileWriter
-}
-
-func NewServerArgs(strg storager, cfg configer, fw fileWriter) *ServerArgs {
-	return &ServerArgs{
-		storage:    strg,
-		config:     cfg,
-		fileWriter: fw,
-	}
-}
-
-func (sa *ServerArgs) ShortenURL(c *fiber.Ctx) error {
-	body := string(c.Body())
-	_, err := url.ParseRequestURI(body)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	fullURL := body
-	shortURL := myhash.Base62(fullURL)
-	ok := sa.storage.AddURL(shortURL, fullURL)
-	if ok {
-		surl := storage.NewStoredURL(shortURL, fullURL)
-		err := sa.fileWriter.WriteInto(surl)
-		if err != nil {
-			return c.SendStatus(http.StatusInternalServerError)
-		}
-	}
-
-	c.Set("Content-Type", "text/plain")
-	baseAddr := sa.config.GetBaseAddr()
-	return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
-}
-
-func (sa *ServerArgs) ReturnURL(c *fiber.Ctx) error {
-	shortURL := c.Params("short")
-	fullURL, err := sa.storage.GetURL(shortURL)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-	c.Set("Location", fullURL)
-	return c.SendStatus(http.StatusTemporaryRedirect)
-}
-
-type apiReq struct {
-	URL string `json:"url"`
-}
-
-type apiRes struct {
-	Result string `json:"result"`
-}
-
-func (sa *ServerArgs) ShortenAPI(c *fiber.Ctx) error {
-	if !c.Is("json") {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	var req apiReq
-	err := json.Unmarshal(c.Body(), &req)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	_, err = url.ParseRequestURI(req.URL)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	fullURL := req.URL
-	shortURL := myhash.Base62(fullURL)
-	ok := sa.storage.AddURL(shortURL, fullURL)
-	if ok {
-		surl := storage.NewStoredURL(shortURL, fullURL)
-		err := sa.fileWriter.WriteInto(surl)
-		if err != nil {
-			return c.SendStatus(http.StatusInternalServerError)
-		}
-	}
-
-	var res apiRes
-	baseAddr := sa.config.GetBaseAddr()
-	res.Result = baseAddr + "/" + shortURL
-	resBody, err := json.Marshal(&res)
-	if err != nil {
-		c.SendStatus(http.StatusInternalServerError)
-	}
-	c.Set("Content-Type", "application/json")
-	return c.Status(http.StatusCreated).Send(resBody)
-}
 
 func Set(app *fiber.App, sa *ServerArgs) {
 	app.Use(fiberzap.New(fiberzap.Config{
@@ -127,9 +22,11 @@ func Set(app *fiber.App, sa *ServerArgs) {
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
 
-	app.Post("/api/shorten", sa.ShortenAPI)
-	app.Get("/:short", sa.ReturnURL)
-	app.Post("/", sa.ShortenURL)
+	app.Post("/api/shorten/batch", timeout.NewWithContext(sa.ShortenBatch, sa.cfg.TimeoutDuration()))
+	app.Post("/api/shorten", timeout.NewWithContext(sa.ShortenAPI, sa.cfg.TimeoutDuration()))
+	app.Get("/ping", timeout.NewWithContext(sa.PingDB, sa.cfg.TimeoutDuration()))
+	app.Get("/:short", timeout.NewWithContext(sa.ReturnURL, sa.cfg.TimeoutDuration()))
+	app.Post("/", timeout.NewWithContext(sa.ShortenURL, sa.cfg.TimeoutDuration()))
 
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
@@ -138,4 +35,55 @@ func Set(app *fiber.App, sa *ServerArgs) {
 	app.Use(func(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	})
+}
+
+func StartWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
+	strg := storage.NewSimpleStorage()
+
+	sa := NewServerArgs(strg, cfg, myhash.Base62)
+	Set(app, sa)
+
+	err := app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
+	}
+}
+
+func StartWithFileStorage(app *fiber.App, cfg *config.Cfg) {
+	fs, err := storage.NewFileStorage(cfg.GetFilePath())
+	if err != nil {
+		log.Fatalf("Can't open the file: %v", err)
+	}
+	defer fs.Close()
+
+	sa := NewServerArgs(fs, cfg, myhash.Base62)
+	Set(app, sa)
+
+	err = app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
+	}
+}
+
+func StartWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
+	db, err := storage.NewDB(cfg.GetDatabaseDsn())
+	if err != nil {
+		log.Fatalf("Can't open database: %v", err)
+	}
+	defer db.Close()
+
+	err = storage.InitDB(db, cfg.TimeoutDuration())
+	if err != nil {
+		log.Fatalf("Can't init database: %v", err)
+	}
+
+	sdb := storage.NewDatabaseStorage(db)
+
+	sa := NewServerArgs(sdb, cfg, myhash.Base62)
+	Set(app, sa)
+
+	err = app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
+	}
 }

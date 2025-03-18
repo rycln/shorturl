@@ -7,7 +7,7 @@ import (
 	config "github.com/rycln/shorturl/configs"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/server"
-	"github.com/rycln/shorturl/internal/app/storage"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -18,30 +18,25 @@ func main() {
 	defer logger.Log.Sync()
 
 	cfg := config.NewCfg()
-	strg := storage.NewSimpleMemStorage()
-
-	fd, err := storage.NewFileDecoder(cfg.GetFilePath())
-	if err != nil {
-		log.Fatalf("Can't open the file: %v", err)
-	}
-	err = fd.RestoreStorage(strg)
-	if err != nil {
-		log.Fatalf("Can't restore from file: %v", err)
-	}
-	fd.Close()
-
-	fe, err := storage.NewFileEncoder(cfg.GetFilePath())
-	if err != nil {
-		log.Fatalf("Can't open the file: %v", err)
-	}
-	defer fe.Close()
-
+	logger.Log.Info("Server configuration:",
+		zap.String("addr", cfg.GetServerAddr()),
+		zap.String("base_url", cfg.GetBaseAddr()),
+		zap.String("storage", cfg.StorageIs()),
+	)
 	app := fiber.New()
-	sa := server.NewServerArgs(strg, cfg, fe)
-	server.Set(app, sa)
 
-	err = app.Listen(cfg.GetServerAddr())
-	if err != nil {
-		log.Fatalf("Can't start the server: %v", err)
+	switch cfg.StorageIs() {
+	case "db":
+		logger.Log.Info("Storage configuration",
+			zap.String("db_dsn", cfg.GetDatabaseDsn()),
+		)
+		server.StartWithDatabaseStorage(app, cfg)
+	case "file":
+		logger.Log.Info("Storage configuration",
+			zap.String("file_path", cfg.GetFilePath()),
+		)
+		server.StartWithFileStorage(app, cfg)
+	default:
+		server.StartWithSimpleStorage(app, cfg)
 	}
 }

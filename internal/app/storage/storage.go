@@ -4,29 +4,22 @@ import (
 	"errors"
 )
 
-type SimpleMemStorage struct {
-	storage map[string]string
+var (
+	ErrConflict    = errors.New("shortened URL already exists")
+	ErrNotExist    = errors.New("shortened URL does not exist")
+	ErrTimeLimit   = errors.New("time limit exceeded")
+	ErrNotDatabase = errors.New("storage is not database")
+)
+
+type ShortenedURL struct {
+	ShortURL string `json:"short_url"`
+	OrigURL  string `json:"original_url"`
 }
 
-func NewSimpleMemStorage() *SimpleMemStorage {
-	return &SimpleMemStorage{
-		storage: make(map[string]string),
+func NewShortenedURL(shortURL, origURL string) ShortenedURL {
+	surl := ShortenedURL{
+		ShortURL: shortURL,
+		OrigURL:  origURL,
 	}
-}
-
-func (sms SimpleMemStorage) AddURL(shortURL, fullURL string) bool {
-	_, ok := sms.storage[shortURL]
-	if ok {
-		return false
-	}
-	sms.storage[shortURL] = fullURL
-	return true
-}
-
-func (sms SimpleMemStorage) GetURL(shortURL string) (string, error) {
-	_, ok := sms.storage[shortURL]
-	if !ok {
-		return "", errors.New("shortened URL does not exist")
-	}
-	return sms.storage[shortURL], nil
+	return surl
 }
