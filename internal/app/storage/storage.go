@@ -5,10 +5,9 @@ import (
 )
 
 var (
-	ErrConflict    = errors.New("shortened URL already exists")
-	ErrNotExist    = errors.New("shortened URL does not exist")
-	ErrTimeLimit   = errors.New("time limit exceeded")
-	ErrNotDatabase = errors.New("storage is not database")
+	ErrConflict  = errors.New("shortened URL already exists")
+	ErrNotExist  = errors.New("shortened URL does not exist")
+	ErrTimeLimit = errors.New("time limit exceeded")
 )
 
 type ShortenedURL struct {

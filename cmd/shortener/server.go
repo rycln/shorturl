@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
@@ -17,22 +16,20 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type handler interface {
-	Handle(*fiber.Ctx) error
-}
+func startWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
+	strg := storage.NewSimpleStorage()
 
-func serverInit(app *fiber.App, to time.Duration, shorten, apiShorten, shortenBatch, retrieve, ping handler) {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Log,
 		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
 
-	app.Post("/api/shorten/batch", timeout.NewWithContext(shortenBatch.Handle, to))
-	app.Post("/api/shorten", timeout.NewWithContext(apiShorten.Handle, to))
-	app.Get("/ping", timeout.NewWithContext(ping.Handle, to))
-	app.Get("/:short", timeout.NewWithContext(retrieve.Handle, to))
-	app.Post("/", timeout.NewWithContext(shorten.Handle, to))
+	to := cfg.TimeoutDuration()
+	app.Post("/api/shorten/batch", timeout.NewWithContext(handlers.NewShortenBatch(strg, cfg, myhash.Base62).Handle, to))
+	app.Post("/api/shorten", timeout.NewWithContext(handlers.NewAPIShorten(strg, cfg, myhash.Base62).Handle, to))
+	app.Get("/:short", timeout.NewWithContext(handlers.NewRetrieve(strg).Handle, to))
+	app.Post("/", timeout.NewWithContext(handlers.NewShorten(strg, cfg, myhash.Base62).Handle, to))
 
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
@@ -41,18 +38,6 @@ func serverInit(app *fiber.App, to time.Duration, shorten, apiShorten, shortenBa
 	app.Use(func(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	})
-}
-
-func startWithSimpleStorage(app *fiber.App, cfg *config.Cfg) {
-	strg := storage.NewSimpleStorage()
-
-	shorten := handlers.NewShorten(strg, cfg, myhash.Base62)
-	apiShorten := handlers.NewAPIShorten(strg, cfg, myhash.Base62)
-	shortenBatch := handlers.NewShortenBatch(strg, cfg, myhash.Base62)
-	retrieve := handlers.NewRetrieve(strg)
-	ping := handlers.NewPing(strg)
-
-	serverInit(app, cfg.TimeoutDuration(), shorten, apiShorten, shortenBatch, retrieve, ping)
 
 	err := app.Listen(cfg.GetServerAddr())
 	if err != nil {
@@ -67,13 +52,25 @@ func startWithFileStorage(app *fiber.App, cfg *config.Cfg) {
 	}
 	defer fs.Close()
 
-	shorten := handlers.NewShorten(fs, cfg, myhash.Base62)
-	apiShorten := handlers.NewAPIShorten(fs, cfg, myhash.Base62)
-	shortenBatch := handlers.NewShortenBatch(fs, cfg, myhash.Base62)
-	retrieve := handlers.NewRetrieve(fs)
-	ping := handlers.NewPing(fs)
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: logger.Log,
+		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
+		Levels: []zapcore.Level{zapcore.InfoLevel},
+	}))
 
-	serverInit(app, cfg.TimeoutDuration(), shorten, apiShorten, shortenBatch, retrieve, ping)
+	to := cfg.TimeoutDuration()
+	app.Post("/api/shorten/batch", timeout.NewWithContext(handlers.NewShortenBatch(fs, cfg, myhash.Base62).Handle, to))
+	app.Post("/api/shorten", timeout.NewWithContext(handlers.NewAPIShorten(fs, cfg, myhash.Base62).Handle, to))
+	app.Get("/:short", timeout.NewWithContext(handlers.NewRetrieve(fs).Handle, to))
+	app.Post("/", timeout.NewWithContext(handlers.NewShorten(fs, cfg, myhash.Base62).Handle, to))
+
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
+
+	app.Use(func(c *fiber.Ctx) error {
+		return c.SendStatus(http.StatusBadRequest)
+	})
 
 	err = app.Listen(cfg.GetServerAddr())
 	if err != nil {
@@ -95,13 +92,26 @@ func startWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
 
 	dbs := storage.NewDatabaseStorage(db)
 
-	shorten := handlers.NewShorten(dbs, cfg, myhash.Base62)
-	apiShorten := handlers.NewAPIShorten(dbs, cfg, myhash.Base62)
-	shortenBatch := handlers.NewShortenBatch(dbs, cfg, myhash.Base62)
-	retrieve := handlers.NewRetrieve(dbs)
-	ping := handlers.NewPing(dbs)
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger: logger.Log,
+		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
+		Levels: []zapcore.Level{zapcore.InfoLevel},
+	}))
 
-	serverInit(app, cfg.TimeoutDuration(), shorten, apiShorten, shortenBatch, retrieve, ping)
+	to := cfg.TimeoutDuration()
+	app.Post("/api/shorten/batch", timeout.NewWithContext(handlers.NewShortenBatch(dbs, cfg, myhash.Base62).Handle, to))
+	app.Post("/api/shorten", timeout.NewWithContext(handlers.NewAPIShorten(dbs, cfg, myhash.Base62).Handle, to))
+	app.Get("/ping", timeout.NewWithContext(handlers.NewPing(dbs).Handle, to))
+	app.Get("/:short", timeout.NewWithContext(handlers.NewRetrieve(dbs).Handle, to))
+	app.Post("/", timeout.NewWithContext(handlers.NewShorten(dbs, cfg, myhash.Base62).Handle, to))
+
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
+
+	app.Use(func(c *fiber.Ctx) error {
+		return c.SendStatus(http.StatusBadRequest)
+	})
 
 	err = app.Listen(cfg.GetServerAddr())
 	if err != nil {
