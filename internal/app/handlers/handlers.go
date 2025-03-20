@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const TOKEN_EXP = time.Minute * 10
+const tokenExp = time.Hour * 24
 
 var ErrNoToken = errors.New("no jwt token")
 
@@ -45,7 +45,7 @@ func makeUserID() string {
 func makeTokenString(uid, key string) (string, error) {
 	claims := jwtClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKEN_EXP)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
 		},
 		ID: uid,
 	}
