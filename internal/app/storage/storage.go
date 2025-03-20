@@ -11,12 +11,14 @@ var (
 )
 
 type ShortenedURL struct {
-	ShortURL string `json:"short_url"`
-	OrigURL  string `json:"original_url"`
+	UserID   string
+	ShortURL string
+	OrigURL  string
 }
 
-func NewShortenedURL(shortURL, origURL string) ShortenedURL {
+func NewShortenedURL(uid, shortURL, origURL string) ShortenedURL {
 	surl := ShortenedURL{
+		UserID:   uid,
 		ShortURL: shortURL,
 		OrigURL:  origURL,
 	}
