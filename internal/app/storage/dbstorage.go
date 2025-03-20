@@ -55,7 +55,7 @@ func (dbs *DatabaseStorage) AddURL(ctx context.Context, surl ShortenedURL) error
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, sqlInsertURL, surl.ShortURL, surl.OrigURL)
+	_, err = tx.ExecContext(ctx, sqlInsertURL, surl.UserID, surl.ShortURL, surl.OrigURL)
 	if err != nil {
 		tx.Rollback()
 		var pgErr *pgconn.PgError
@@ -73,7 +73,7 @@ func (dbs *DatabaseStorage) AddBatchURL(ctx context.Context, surls []ShortenedUR
 		return err
 	}
 	for _, surl := range surls {
-		_, err := tx.ExecContext(ctx, sqlInsertURL, surl.ShortURL, surl.OrigURL)
+		_, err := tx.ExecContext(ctx, sqlInsertURL, surl.UserID, surl.ShortURL, surl.OrigURL)
 		if err != nil {
 			tx.Rollback()
 			return err

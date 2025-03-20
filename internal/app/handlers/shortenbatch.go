@@ -18,6 +18,7 @@ type batchStorager interface {
 
 type batchConfiger interface {
 	GetBaseAddr() string
+	GetKey() string
 }
 
 type ShortenBatch struct {
@@ -62,6 +63,7 @@ func (sb *ShortenBatch) Handle(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
+	uid := getUserID(c, sb.cfg.GetKey())
 	surls := make([]storage.ShortenedURL, len(reqBatches))
 	resBatches := make([]batchRes, len(reqBatches))
 	baseAddr := sb.cfg.GetBaseAddr()
@@ -71,7 +73,7 @@ func (sb *ShortenBatch) Handle(c *fiber.Ctx) error {
 			return c.SendStatus(http.StatusBadRequest)
 		}
 		shortURL := sb.hashFunc(b.OrigURL)
-		surls[i] = storage.NewShortenedURL(shortURL, b.OrigURL)
+		surls[i] = storage.NewShortenedURL(uid, shortURL, b.OrigURL)
 		resBatches[i] = newBatchRes(b.ID, baseAddr+"/"+shortURL)
 	}
 

@@ -19,6 +19,7 @@ type shortenStorager interface {
 
 type shortenConfiger interface {
 	GetBaseAddr() string
+	GetKey() string
 }
 
 type Shorten struct {
@@ -42,11 +43,12 @@ func (s *Shorten) Handle(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
+	uid := getUserID(c, s.cfg.GetKey())
 	origURL := body
 	shortURL := s.hashFunc(origURL)
 
 	baseAddr := s.cfg.GetBaseAddr()
-	surl := storage.NewShortenedURL(shortURL, origURL)
+	surl := storage.NewShortenedURL(uid, shortURL, origURL)
 	err = s.strg.AddURL(c.UserContext(), surl)
 	if err == nil {
 		c.Set("Content-Type", "text/plain")

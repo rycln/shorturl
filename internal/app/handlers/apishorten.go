@@ -20,6 +20,7 @@ type apiStorager interface {
 
 type apiConfiger interface {
 	GetBaseAddr() string
+	GetKey() string
 }
 
 type APIShorten struct {
@@ -60,12 +61,13 @@ func (as *APIShorten) Handle(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
+	uid := getUserID(c, as.cfg.GetKey())
 	origURL := req.URL
 	shortURL := as.hashFunc(origURL)
 
 	var res apiRes
 	baseAddr := as.cfg.GetBaseAddr()
-	surl := storage.NewShortenedURL(shortURL, origURL)
+	surl := storage.NewShortenedURL(uid, shortURL, origURL)
 	err = as.strg.AddURL(c.UserContext(), surl)
 	if err == nil {
 		res.Result = baseAddr + "/" + shortURL

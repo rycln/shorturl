@@ -93,7 +93,8 @@ func TestFileStorageAddURL(t *testing.T) {
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var err error
 				for i := range test.shortURLs {
-					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					testID := "1"
+					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err = strg.AddURL(context.Background(), surl)
 				}
 				if test.want.wantErr {
@@ -163,7 +164,8 @@ func TestFileStorageAddBatchURL(t *testing.T) {
 				var surls = make([]ShortenedURL, len(test.shortURLs))
 				var err error
 				for i := range test.shortURLs {
-					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					testID := "1"
+					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					surls[i] = surl
 				}
 				err = strg.AddBatchURL(context.Background(), surls)
@@ -257,7 +259,8 @@ func TestFileStorageGetOrigURL(t *testing.T) {
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					testID := "1"
+					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err := strg.encoder.encoder.Encode(&surl)
 					require.NoError(t, err)
 				}
@@ -341,7 +344,8 @@ func TestFileStorageShortOrigURL(t *testing.T) {
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					testID := "1"
+					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err := strg.encoder.encoder.Encode(&surl)
 					require.NoError(t, err)
 				}

@@ -41,7 +41,7 @@ func NewCfg() *Cfg {
 	}
 
 	if cfg.Key == "" {
-		cfg.Key = string(generateKey(defaultKeyLength))
+		cfg.Key = generateKey(defaultKeyLength)
 	}
 
 	return cfg
@@ -87,6 +87,6 @@ func (cfg *Cfg) TimeoutDuration() time.Duration {
 	return time.Duration(cfg.Timeout) * time.Second
 }
 
-func (cfg *Cfg) GetKey() []byte {
-	return []byte(cfg.Key)
+func (cfg *Cfg) GetKey() string {
+	return cfg.Key
 }

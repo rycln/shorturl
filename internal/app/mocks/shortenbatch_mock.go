@@ -85,3 +85,17 @@ func (mr *MockbatchConfigerMockRecorder) GetBaseAddr() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBaseAddr", reflect.TypeOf((*MockbatchConfiger)(nil).GetBaseAddr))
 }
+
+// GetKey mocks base method.
+func (m *MockbatchConfiger) GetKey() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKey")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetKey indicates an expected call of GetKey.
+func (mr *MockbatchConfigerMockRecorder) GetKey() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKey", reflect.TypeOf((*MockbatchConfiger)(nil).GetKey))
+}
