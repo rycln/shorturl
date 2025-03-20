@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -43,7 +44,20 @@ func (s *Shorten) Handle(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	uid := getUserID(c, s.cfg.GetKey())
+	var key, jwtToken, uid string
+	key = s.cfg.GetKey()
+	jwtToken, uid, err = getTokenAndUID(c, key)
+	if err != nil {
+		uid = makeUserID()
+		jwtToken, err = makeTokenString(uid, key)
+		if err != nil {
+			logger.Log.Info("path:"+c.Path()+", "+"func:makeTokenString()",
+				zap.Error(err),
+			)
+			c.SendStatus(http.StatusInternalServerError)
+		}
+	}
+
 	origURL := body
 	shortURL := s.hashFunc(origURL)
 
@@ -52,6 +66,7 @@ func (s *Shorten) Handle(c *fiber.Ctx) error {
 	err = s.strg.AddURL(c.UserContext(), surl)
 	if err == nil {
 		c.Set("Content-Type", "text/plain")
+		c.Set("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
 		return c.Status(http.StatusCreated).SendString(baseAddr + "/" + shortURL)
 	}
 	if errors.Is(err, storage.ErrConflict) {

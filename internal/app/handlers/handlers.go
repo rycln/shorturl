@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -10,15 +12,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const TOKEN_EXP = time.Minute * 10
+
+var ErrNoToken = errors.New("no jwt token")
+
 type jwtClaims struct {
 	jwt.RegisteredClaims
 	ID string `json:"id"`
 }
 
-func getUserID(c *fiber.Ctx, key string) string {
+func getTokenAndUID(c *fiber.Ctx, key string) (string, string, error) {
 	rawToken := string(c.Request().Header.Peek("Authorization"))
 	if rawToken == "" {
-		return makeUserID()
+		return "", "", ErrNoToken
 	}
 	rawToken = strings.TrimPrefix(rawToken, "Bearer")
 	rawToken = strings.TrimSpace(rawToken)
@@ -27,11 +33,26 @@ func getUserID(c *fiber.Ctx, key string) string {
 		return []byte(key), nil
 	})
 	if err != nil {
-		return makeUserID()
+		return "", "", err
 	}
-	return claims.ID
+	return rawToken, claims.ID, nil
 }
 
 func makeUserID() string {
 	return uuid.NewString()
+}
+
+func makeTokenString(uid, key string) (string, error) {
+	claims := jwtClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKEN_EXP)),
+		},
+		ID: uid,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(key))
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
 }
