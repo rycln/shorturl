@@ -9,6 +9,7 @@ const (
 	testBaseAddr        = "http://localhost:8080"
 	testHashVal         = "abc"
 	testTimeoutDuration = time.Duration(2) * time.Second
+	testKey             = "test_key"
 )
 
 var errTest = errors.New("test error")

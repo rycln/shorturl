@@ -109,9 +109,11 @@ func TestAPIShorten_Handle(t *testing.T) {
 			switch test.want.code {
 			case http.StatusCreated:
 				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mCfg.EXPECT().GetKey().Return(testKey)
 				mStrg.EXPECT().AddURL(gomock.Any(), gomock.Any()).Return(nil)
 			case http.StatusConflict:
 				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mCfg.EXPECT().GetKey().Return(testKey)
 				mStrg.EXPECT().AddURL(gomock.Any(), gomock.Any()).Return(storage.ErrConflict)
 				mStrg.EXPECT().GetShortURL(gomock.Any(), gomock.Any()).Return(testHashVal, nil)
 			}

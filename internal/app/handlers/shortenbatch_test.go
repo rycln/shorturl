@@ -86,6 +86,7 @@ func TestShortenBatch_Handle(t *testing.T) {
 
 			if test.want.code != http.StatusBadRequest {
 				mCfg.EXPECT().GetBaseAddr().Return(testBaseAddr)
+				mCfg.EXPECT().GetKey().Return(testKey)
 				mStrg.EXPECT().AddBatchURL(gomock.Any(), gomock.Any()).Return(nil)
 			}
 
