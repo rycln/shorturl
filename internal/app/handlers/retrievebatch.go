@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/storage"
 	"go.uber.org/zap"
@@ -47,13 +47,20 @@ func newRetBatchRes(shortURL, origURL string) retBatchRes {
 }
 
 func (rb *RetrieveBatch) Handle(c *fiber.Ctx) error {
-	user := c.Locals("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-	if claims["id"] == nil {
-		logger.Log.Info("path:" + c.Path() + ", " + "user id is empty")
-		return c.SendStatus(http.StatusInternalServerError)
+	key := rb.cfg.GetKey()
+	_, uid, err := getTokenAndUID(c, key)
+	if err != nil {
+		uid = makeUserID()
+		jwt, err := makeTokenString(uid, key)
+		if err != nil {
+			logger.Log.Info("path:"+c.Path()+", "+"func:makeTokenString()",
+				zap.Error(err),
+			)
+			return c.SendStatus(http.StatusInternalServerError)
+		}
+		c.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
+		return c.SendStatus(http.StatusNoContent)
 	}
-	uid := claims["id"].(string)
 
 	surls, err := rb.strg.GetAllUserURLs(c.UserContext(), uid)
 	if err == nil {
@@ -70,7 +77,7 @@ func (rb *RetrieveBatch) Handle(c *fiber.Ctx) error {
 			c.SendStatus(http.StatusInternalServerError)
 		}
 		c.Set("Content-Type", "application/json")
-		return c.Status(http.StatusCreated).Send(resBody)
+		return c.Status(http.StatusOK).Send(resBody)
 	}
 	if errors.Is(err, storage.ErrNoUserURLs) {
 		return c.SendStatus(http.StatusNoContent)

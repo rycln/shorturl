@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
-	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/timeout"
@@ -105,11 +104,6 @@ func startWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
 	app.Get("/ping", timeout.NewWithContext(handlers.NewPing(dbs).Handle, to))
 	app.Get("/:short", timeout.NewWithContext(handlers.NewRetrieve(dbs).Handle, to))
 	app.Post("/", timeout.NewWithContext(handlers.NewShorten(dbs, cfg, myhash.Base62).Handle, to))
-
-	app.Use(jwtware.New(jwtware.Config{
-		SigningKey: jwtware.SigningKey{Key: []byte(cfg.GetKey())},
-	}))
-
 	app.Get("/api/user/urls", timeout.NewWithContext(handlers.NewRetrieveBatch(dbs, cfg).Handle, to))
 
 	app.Use(compress.New(compress.Config{
