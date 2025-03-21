@@ -49,11 +49,11 @@ func newRetBatchRes(shortURL, origURL string) retBatchRes {
 func (rb *RetrieveBatch) Handle(c *fiber.Ctx) error {
 	user := c.Locals("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
-	uid := claims["ID"].(string)
-	if uid == "" {
+	if claims["ID"] == nil {
 		logger.Log.Info("path:" + c.Path() + ", " + "user id is empty")
 		return c.SendStatus(http.StatusInternalServerError)
 	}
+	uid := claims["ID"].(string)
 
 	surls, err := rb.strg.GetAllUserURLs(c.UserContext(), uid)
 	if err == nil {

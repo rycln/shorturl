@@ -124,6 +124,10 @@ func (dbs *DatabaseStorage) GetAllUserURLs(ctx context.Context, uid string) ([]S
 		}
 		surls = append(surls, surl)
 	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
 	if surls == nil {
 		return nil, ErrNoUserURLs
 	}
