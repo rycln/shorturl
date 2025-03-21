@@ -62,17 +62,17 @@ func (as *APIShorten) Handle(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	var key, jwtToken, uid string
+	var key, jwt, uid string
 	key = as.cfg.GetKey()
-	jwtToken, uid, err = getTokenAndUID(c, key)
+	jwt, uid, err = getTokenAndUID(c, key)
 	if err != nil {
 		uid = makeUserID()
-		jwtToken, err = makeTokenString(uid, key)
+		jwt, err = makeTokenString(uid, key)
 		if err != nil {
 			logger.Log.Info("path:"+c.Path()+", "+"func:makeTokenString()",
 				zap.Error(err),
 			)
-			c.SendStatus(http.StatusInternalServerError)
+			return c.SendStatus(http.StatusInternalServerError)
 		}
 	}
 
@@ -93,7 +93,7 @@ func (as *APIShorten) Handle(c *fiber.Ctx) error {
 			c.SendStatus(http.StatusInternalServerError)
 		}
 		c.Set("Content-Type", "application/json")
-		c.Set("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
+		c.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
 		return c.Status(http.StatusCreated).Send(resBody)
 	}
 	if errors.Is(err, storage.ErrConflict) {

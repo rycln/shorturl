@@ -7,3 +7,5 @@ const sqlInsertURL = "INSERT INTO urls (user_id, short_url, original_url) VALUES
 const sqlGetOrigURL = "SELECT original_url FROM urls WHERE short_url = $1"
 
 const sqlGetShortURL = "SELECT short_url FROM urls WHERE original_url = $1"
+
+const sqlGetAllUserURLs = "SELECT user_id, short_url, original_url FROM urls WHERE user_id = $1"
