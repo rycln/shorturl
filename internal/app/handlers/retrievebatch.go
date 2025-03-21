@@ -59,6 +59,9 @@ func (rb *RetrieveBatch) Handle(c *fiber.Ctx) error {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 		c.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
+		cookie := new(fiber.Cookie)
+		cookie.Value = fmt.Sprintf("Bearer %s", jwt)
+		c.Cookie(cookie)
 		return c.SendStatus(http.StatusNoContent)
 	}
 
