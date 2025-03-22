@@ -10,6 +10,7 @@ const (
 	testHashVal         = "abc"
 	testTimeoutDuration = time.Duration(2) * time.Second
 	testKey             = "test_key"
+	testID              = "1"
 )
 
 var errTest = errors.New("test error")
