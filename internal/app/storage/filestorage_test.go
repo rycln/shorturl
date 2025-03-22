@@ -93,7 +93,6 @@ func TestFileStorageAddURL(t *testing.T) {
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var err error
 				for i := range test.shortURLs {
-					testID := "1"
 					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err = strg.AddURL(context.Background(), surl)
 				}
@@ -164,7 +163,6 @@ func TestFileStorageAddBatchURL(t *testing.T) {
 				var surls = make([]ShortenedURL, len(test.shortURLs))
 				var err error
 				for i := range test.shortURLs {
-					testID := "1"
 					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					surls[i] = surl
 				}
@@ -237,18 +235,6 @@ func TestFileStorageGetOrigURL(t *testing.T) {
 				wantErr: false,
 			},
 		},
-		{
-			name: "Wrong GetURL request #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				wantErr: true,
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -259,7 +245,6 @@ func TestFileStorageGetOrigURL(t *testing.T) {
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					testID := "1"
 					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err := strg.encoder.encoder.Encode(&surl)
 					require.NoError(t, err)
@@ -280,7 +265,7 @@ func TestFileStorageGetOrigURL(t *testing.T) {
 	}
 }
 
-func TestFileStorageShortOrigURL(t *testing.T) {
+func TestFileStorageGetShortURL(t *testing.T) {
 	type want struct {
 		mustContain map[string]string
 		wantErr     bool
@@ -322,18 +307,6 @@ func TestFileStorageShortOrigURL(t *testing.T) {
 				wantErr: false,
 			},
 		},
-		{
-			name: "Wrong GetURL request #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				wantErr: true,
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -344,7 +317,6 @@ func TestFileStorageShortOrigURL(t *testing.T) {
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
-					testID := "1"
 					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err := strg.encoder.encoder.Encode(&surl)
 					require.NoError(t, err)
@@ -358,6 +330,101 @@ func TestFileStorageShortOrigURL(t *testing.T) {
 					}
 					if !test.want.wantErr {
 						assert.Equal(t, k, shortURL)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestFileStorageGetAllUserURLs(t *testing.T) {
+	type want struct {
+		mustContain map[string]string
+		uid         string
+		wantErr     bool
+	}
+
+	tests := []struct {
+		name      string
+		dataUID   string
+		shortURLs []string
+		origURLs  []string
+		want      want
+	}{
+		{
+			name:    "Simple test #1",
+			dataUID: testID,
+			shortURLs: []string{
+				"abcdefg",
+			},
+			origURLs: []string{
+				"https://practicum.yandex.ru/",
+			},
+			want: want{
+				mustContain: map[string]string{
+					"abcdefg": "https://practicum.yandex.ru/",
+				},
+				uid:     testID,
+				wantErr: false,
+			},
+		},
+		{
+			name:    "Simple test #2",
+			dataUID: testID,
+			shortURLs: []string{
+				"1234ABC",
+				"235DCE",
+			},
+			origURLs: []string{
+				"https://ya.ru/",
+				"https://yandex.ru/",
+			},
+			want: want{
+				mustContain: map[string]string{
+					"1234ABC": "https://ya.ru/",
+					"235DCE":  "https://yandex.ru/",
+				},
+				uid:     testID,
+				wantErr: false,
+			},
+		},
+		{
+			name:    "Wrong GetURL request #1",
+			dataUID: "testID",
+			shortURLs: []string{
+				"abcdefg",
+			},
+			origURLs: []string{
+				"https://practicum.yandex.ru/",
+			},
+			want: want{
+				uid:     "2",
+				wantErr: true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fileName := "test"
+			strg, err := NewFileStorage(fileName)
+			require.NoError(t, err)
+			defer os.Remove(fileName)
+
+			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
+				for i := range test.shortURLs {
+					surl := NewShortenedURL(test.dataUID, test.shortURLs[i], test.origURLs[i])
+					err := strg.encoder.encoder.Encode(&surl)
+					require.NoError(t, err)
+				}
+				surls, err := strg.GetAllUserURLs(context.Background(), test.want.uid)
+				if err != nil {
+					if test.want.wantErr {
+						assert.Error(t, err)
+					}
+				}
+				if !test.want.wantErr {
+					for _, surl := range surls {
+						assert.Equal(t, test.want.mustContain[surl.ShortURL], surl.OrigURL)
 					}
 				}
 			}
