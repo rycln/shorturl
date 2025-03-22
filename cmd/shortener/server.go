@@ -61,6 +61,7 @@ func startWithFileStorage(app *fiber.App, cfg *config.Cfg) {
 	to := cfg.TimeoutDuration()
 	app.Post("/api/shorten/batch", timeout.NewWithContext(handlers.NewShortenBatch(fs, cfg, myhash.Base62).Handle, to))
 	app.Post("/api/shorten", timeout.NewWithContext(handlers.NewAPIShorten(fs, cfg, myhash.Base62).Handle, to))
+	app.Get("/api/user/urls", timeout.NewWithContext(handlers.NewRetrieveBatch(fs, cfg).Handle, to))
 	app.Get("/:short", timeout.NewWithContext(handlers.NewRetrieve(fs).Handle, to))
 	app.Post("/", timeout.NewWithContext(handlers.NewShorten(fs, cfg, myhash.Base62).Handle, to))
 

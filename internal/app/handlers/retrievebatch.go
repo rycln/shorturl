@@ -82,7 +82,7 @@ func (rb *RetrieveBatch) Handle(c *fiber.Ctx) error {
 		c.Set("Content-Type", "application/json")
 		return c.Status(http.StatusOK).Send(resBody)
 	}
-	if errors.Is(err, storage.ErrNoUserURLs) {
+	if errors.Is(err, storage.ErrNotExist) {
 		return c.SendStatus(http.StatusNoContent)
 	}
 	logger.Log.Info("path:"+c.Path()+", "+"func:GetAllUserURLs()",
