@@ -144,7 +144,7 @@ func (dbs *DatabaseStorage) DeleteUserURLs(ctx context.Context, dsurls []DelShor
 		return err
 	}
 	for _, dsurl := range dsurls {
-		_, err := tx.ExecContext(ctx, sqlDeleteUserURLs, dsurl.UserID, dsurl.ShortURL)
+		_, err := tx.ExecContext(ctx, sqlDeleteUserURLs, dsurl.ShortURL)
 		if err != nil {
 			tx.Rollback()
 			return err
