@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rycln/shorturl/internal/app/storage"
 )
 
 type retrieveStorager interface {
@@ -25,9 +27,12 @@ func (r *Retrieve) Handle(c *fiber.Ctx) error {
 	shortURL := c.Params("short")
 
 	origURL, err := r.strg.GetOrigURL(c.UserContext(), shortURL)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
+	if err == nil {
+		c.Set("Location", origURL)
+		return c.SendStatus(http.StatusTemporaryRedirect)
 	}
-	c.Set("Location", origURL)
-	return c.SendStatus(http.StatusTemporaryRedirect)
+	if errors.Is(err, storage.ErrDeletedURL) {
+		return c.SendStatus(http.StatusGone)
+	}
+	return c.SendStatus(http.StatusBadRequest)
 }

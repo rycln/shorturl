@@ -85,9 +85,13 @@ func (dbs *DatabaseStorage) AddBatchURL(ctx context.Context, surls []ShortenedUR
 func (dbs *DatabaseStorage) GetOrigURL(ctx context.Context, shortURL string) (string, error) {
 	row := dbs.db.QueryRowContext(ctx, sqlGetOrigURL, shortURL)
 	var origURL string
-	err := row.Scan(&origURL)
+	var isDeleted bool
+	err := row.Scan(&origURL, &isDeleted)
 	if err != nil {
 		return "", err
+	}
+	if isDeleted {
+		return "", ErrDeletedURL
 	}
 	return origURL, nil
 }
