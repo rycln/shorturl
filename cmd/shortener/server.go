@@ -103,6 +103,7 @@ func startWithDatabaseStorage(app *fiber.App, cfg *config.Cfg) {
 	app.Post("/api/shorten/batch", timeout.NewWithContext(handlers.NewShortenBatch(dbs, cfg, myhash.Base62).Handle, to))
 	app.Post("/api/shorten", timeout.NewWithContext(handlers.NewAPIShorten(dbs, cfg, myhash.Base62).Handle, to))
 	app.Get("/api/user/urls", timeout.NewWithContext(handlers.NewRetrieveBatch(dbs, cfg).Handle, to))
+	app.Delete("/api/user/urls", timeout.NewWithContext(handlers.NewDeleteBatch(dbs, cfg).Handle, to))
 	app.Get("/ping", timeout.NewWithContext(handlers.NewPing(dbs).Handle, to))
 	app.Get("/:short", timeout.NewWithContext(handlers.NewRetrieve(dbs).Handle, to))
 	app.Post("/", timeout.NewWithContext(handlers.NewShorten(dbs, cfg, myhash.Base62).Handle, to))
