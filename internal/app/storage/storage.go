@@ -24,3 +24,15 @@ func NewShortenedURL(uid, shortURL, origURL string) ShortenedURL {
 	}
 	return surl
 }
+
+type DelShortURLs struct {
+	UserID   string
+	ShortURL string
+}
+
+func NewDelShortURLs(uid, shortURL string) DelShortURLs {
+	return DelShortURLs{
+		UserID:   uid,
+		ShortURL: shortURL,
+	}
+}
