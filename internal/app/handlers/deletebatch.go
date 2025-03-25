@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const batchDeletingPeriod = 10 * time.Second
+const batchDeletingPeriod = 5 * time.Second
 
 type deleteBatchStorager interface {
 	DeleteUserURLs(context.Context, []storage.DelShortURLs) error
