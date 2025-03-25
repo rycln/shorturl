@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rycln/shorturl/internal/app/logger"
 	"github.com/rycln/shorturl/internal/app/storage"
+	"go.uber.org/zap"
 )
 
 type retrieveStorager interface {
@@ -34,5 +36,8 @@ func (r *Retrieve) Handle(c *fiber.Ctx) error {
 	if errors.Is(err, storage.ErrDeletedURL) {
 		return c.SendStatus(http.StatusGone)
 	}
+	logger.Log.Info("path:"+c.Path()+", "+"func:GetOrigURL()",
+		zap.Error(err),
+	)
 	return c.SendStatus(http.StatusBadRequest)
 }
