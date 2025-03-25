@@ -10,4 +10,4 @@ const sqlGetShortURL = "SELECT short_url FROM urls WHERE original_url = $1"
 
 const sqlGetAllUserURLs = "SELECT user_id, short_url, original_url FROM urls WHERE user_id = $1"
 
-const sqlDeleteUserURLs = "UPDATE urls SET is_deleted = TRUE WHERE short_url = $1`"
+const sqlDeleteUserURLs = "UPDATE urls SET is_deleted = TRUE WHERE short_url = $1"
