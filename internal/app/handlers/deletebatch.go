@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -79,23 +78,15 @@ func (delb *DeleteBatch) makeChan(uid string, shortURLs []string) {
 
 func mergeChans(inputs <-chan chan storage.DelShortURLs) chan storage.DelShortURLs {
 	out := make(chan storage.DelShortURLs)
-	var wg sync.WaitGroup
 
 	go func() {
 		for ch := range inputs {
-			wg.Add(1)
 			go func(ch <-chan storage.DelShortURLs) {
-				defer wg.Done()
 				for dShortURL := range ch {
 					out <- dShortURL
 				}
 			}(ch)
 		}
-	}()
-
-	go func() {
-		wg.Wait()
-		close(out)
 	}()
 
 	return out
