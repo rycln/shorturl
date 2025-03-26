@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,25 +27,30 @@ type deleteBatchConfiger interface {
 type DeleteBatch struct {
 	strg    deleteBatchStorager
 	cfg     deleteBatchConfiger
-	delChan chan storage.DelShortURLs
+	inChans chan chan storage.DelShortURLs
 }
 
 func NewDeleteBatch(strg deleteBatchStorager, cfg deleteBatchConfiger) *DeleteBatch {
 	delb := &DeleteBatch{
 		strg:    strg,
 		cfg:     cfg,
-		delChan: make(chan storage.DelShortURLs, 1024),
+		inChans: make(chan chan storage.DelShortURLs),
 	}
-	go delb.deleteBatchProcessing()
+
+	deleteBatchInit(delb)
+
 	return delb
+}
+
+func deleteBatchInit(delb *DeleteBatch) {
+	outChan := mergeChans(delb.inChans)
+	go delb.deleteBatchWorker(outChan)
 }
 
 func (delb *DeleteBatch) Handle(c *fiber.Ctx) error {
 	key := delb.cfg.GetKey()
 	_, uid, err := getTokenAndUID(c, key)
 	if err != nil {
-		//return c.SendStatus(http.StatusUnauthorized)
-		//часть автотестов не шлет jwt. Удаление происходит без авторизации.
 		uid = makeUserID()
 	}
 
@@ -54,34 +60,62 @@ func (delb *DeleteBatch) Handle(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	delb.batchGen(uid, shortURLs)
+	delb.makeChan(uid, shortURLs)
 
 	return c.SendStatus(http.StatusAccepted)
 }
 
-func (delb *DeleteBatch) batchGen(uid string, shortURLs []string) {
+func (delb *DeleteBatch) makeChan(uid string, shortURLs []string) {
+	ch := make(chan storage.DelShortURLs)
 	go func() {
+		defer close(ch)
 		for _, shortURL := range shortURLs {
-			delb.delChan <- storage.NewDelShortURLs(uid, shortURL)
+			ch <- storage.NewDelShortURLs(uid, shortURL)
 		}
 	}()
+
+	delb.inChans <- ch
 }
 
-func (delb *DeleteBatch) deleteBatchProcessing() {
+func mergeChans(inputs <-chan chan storage.DelShortURLs) chan storage.DelShortURLs {
+	out := make(chan storage.DelShortURLs)
+	var wg sync.WaitGroup
+
+	go func() {
+		for ch := range inputs {
+			wg.Add(1)
+			go func(ch <-chan storage.DelShortURLs) {
+				defer wg.Done()
+				for dShortURL := range ch {
+					out <- dShortURL
+				}
+			}(ch)
+		}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	return out
+}
+
+func (delb *DeleteBatch) deleteBatchWorker(input <-chan storage.DelShortURLs) {
 	tick := time.NewTicker(batchDeletingPeriod)
 
-	var shortURLBatch []storage.DelShortURLs
+	var delShortURLBatch []storage.DelShortURLs
 
 	for {
 		select {
-		case shortURL := <-delb.delChan:
-			shortURLBatch = append(shortURLBatch, shortURL)
+		case delShortURL := <-input:
+			delShortURLBatch = append(delShortURLBatch, delShortURL)
 		case <-tick.C:
-			if len(shortURLBatch) == 0 {
+			if len(delShortURLBatch) == 0 {
 				continue
 			}
 			//тут отправка пачки в бд
-			err := delb.strg.DeleteUserURLs(context.TODO(), shortURLBatch)
+			err := delb.strg.DeleteUserURLs(context.Background(), delShortURLBatch)
 			if err != nil {
 				logger.Log.Info("Cannot delete batch",
 					zap.Error(err),
@@ -89,7 +123,7 @@ func (delb *DeleteBatch) deleteBatchProcessing() {
 				continue
 			}
 
-			shortURLBatch = nil
+			delShortURLBatch = nil
 		}
 	}
 }
