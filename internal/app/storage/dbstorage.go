@@ -157,6 +157,5 @@ func (dbs *DatabaseStorage) DeleteUserURLs(ctx context.Context, dsurls []DelShor
 			return err
 		}
 	}
-
 	return tx.Commit()
 }
