@@ -49,36 +49,6 @@ func deleteBatchInit(delb *DeleteBatch) {
 	go delb.deleteBatchWorker(mergedChan)
 }
 
-func (delb *DeleteBatch) Handle(c *fiber.Ctx) error {
-	key := delb.cfg.GetKey()
-	_, uid, err := getTokenAndUID(c, key)
-	if err != nil {
-		uid = makeUserID()
-	}
-
-	var shortURLs []string
-	err = json.Unmarshal(c.Body(), &shortURLs)
-	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
-	}
-
-	delb.makeChan(uid, shortURLs)
-
-	return c.SendStatus(http.StatusAccepted)
-}
-
-func (delb *DeleteBatch) makeChan(uid string, shortURLs []string) {
-	ch := make(chan storage.DelShortURLs)
-	go func() {
-		defer close(ch)
-		for _, shortURL := range shortURLs {
-			ch <- storage.NewDelShortURLs(uid, shortURL)
-		}
-	}()
-
-	delb.chans <- ch
-}
-
 func mergeChans(inChans <-chan chan storage.DelShortURLs) chan storage.DelShortURLs {
 	outChan := make(chan storage.DelShortURLs)
 
@@ -122,4 +92,34 @@ func (delb *DeleteBatch) deleteBatchWorker(inChan <-chan storage.DelShortURLs) {
 			delShortURLBatch = nil
 		}
 	}
+}
+
+func (delb *DeleteBatch) Handle(c *fiber.Ctx) error {
+	key := delb.cfg.GetKey()
+	_, uid, err := getTokenAndUID(c, key)
+	if err != nil {
+		uid = makeUserID()
+	}
+
+	var shortURLs []string
+	err = json.Unmarshal(c.Body(), &shortURLs)
+	if err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	delb.makeChan(uid, shortURLs)
+
+	return c.SendStatus(http.StatusAccepted)
+}
+
+func (delb *DeleteBatch) makeChan(uid string, shortURLs []string) {
+	ch := make(chan storage.DelShortURLs)
+	go func() {
+		defer close(ch)
+		for _, shortURL := range shortURLs {
+			ch <- storage.NewDelShortURLs(uid, shortURL)
+		}
+	}()
+
+	delb.chans <- ch
 }

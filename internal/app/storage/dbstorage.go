@@ -139,16 +139,24 @@ func (dbs *DatabaseStorage) GetAllUserURLs(ctx context.Context, uid string) ([]S
 }
 
 func (dbs *DatabaseStorage) DeleteUserURLs(ctx context.Context, dsurls []DelShortURLs) error {
-	tx, err := dbs.db.Begin()
+	tx, err := dbs.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
+
+	stmt, err := tx.PrepareContext(ctx, sqlDeleteUserURLs)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+
 	for _, dsurl := range dsurls {
-		_, err := tx.ExecContext(ctx, sqlDeleteUserURLs, dsurl.ShortURL)
-		if err != nil {
+		if _, err := stmt.ExecContext(ctx, dsurl.ShortURL); err != nil {
 			tx.Rollback()
 			return err
 		}
 	}
+
 	return tx.Commit()
 }
