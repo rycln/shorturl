@@ -85,7 +85,7 @@ func routing(app *fiber.App, cfg *config.Cfg, hs *handlersSet) {
 		app.Get("/ping", timeout.NewWithContext(hs.ping, to))
 	}
 	app.Get("/:short", timeout.NewWithContext(hs.retrieve, to))
-	app.Post("/", timeout.NewWithContext(hs.retrieve, to))
+	app.Post("/", timeout.NewWithContext(hs.shorten, to))
 
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
