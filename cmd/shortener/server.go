@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
 	"github.com/gofiber/fiber/v2"
@@ -27,9 +28,9 @@ type handlersSet struct {
 	deleteBatch   func(*fiber.Ctx) error
 }
 
-type closeFunc func() error
+type shutdownFunc func() error
 
-func newHandlersSet(cfg *config.Cfg) (*handlersSet, closeFunc) {
+func newHandlersSet(cfg *config.Cfg) (*handlersSet, shutdownFunc) {
 	switch cfg.StorageIs() {
 	case "db":
 		logger.Log.Info("Storage configuration",
@@ -37,7 +38,7 @@ func newHandlersSet(cfg *config.Cfg) (*handlersSet, closeFunc) {
 		)
 		ctx, cancel := context.WithCancel(context.Background())
 		dbs, close := storage.NewDatabaseStorage(cfg.GetDatabaseDsn(), cfg.GetTimeoutDuration())
-		shutDown := func() error {
+		shutdown := func() error {
 			cancel()
 			return close()
 		}
@@ -49,7 +50,7 @@ func newHandlersSet(cfg *config.Cfg) (*handlersSet, closeFunc) {
 			ping:          handlers.NewPingHandler(dbs),
 			retrieveBatch: handlers.NewRetrieveBatchHandler(dbs, cfg),
 			deleteBatch:   handlers.NewDeleteBatchHandler(ctx, dbs, cfg),
-		}, shutDown
+		}, shutdown
 	case "file":
 		logger.Log.Info("Storage configuration",
 			zap.String("file_path", cfg.GetFilePath()),
@@ -73,14 +74,12 @@ func newHandlersSet(cfg *config.Cfg) (*handlersSet, closeFunc) {
 	}
 }
 
-func routing(app *fiber.App, cfg *config.Cfg, hs *handlersSet) {
+func routing(app *fiber.App, hs *handlersSet, to time.Duration) {
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.Log,
 		Fields: []string{"url", "method", "latency", "status", "bytesSent"},
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
-
-	to := cfg.GetTimeoutDuration()
 
 	if hs.shortenBatch != nil {
 		app.Post("/api/shorten/batch", timeout.NewWithContext(hs.shortenBatch, to))

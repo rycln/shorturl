@@ -24,11 +24,11 @@ func main() {
 	)
 
 	app := fiber.New()
-	hs, closeStrg := newHandlersSet(cfg)
-	if closeStrg != nil {
-		defer closeStrg()
+	hs, shutdown := newHandlersSet(cfg)
+	if shutdown != nil {
+		defer shutdown()
 	}
-	routing(app, cfg, hs)
+	routing(app, hs, cfg.GetTimeoutDuration())
 
 	err = app.Listen(cfg.GetServerAddr())
 	if err != nil {
