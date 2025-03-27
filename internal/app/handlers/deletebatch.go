@@ -12,31 +12,30 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	batchDeletingPeriod  = 10 * time.Second
-	batchDeletingTimeout = 3 * time.Second
-)
+const batchDeletingPeriod = 10 * time.Second
 
 type deleteBatchStorager interface {
 	DeleteUserURLs(context.Context, []storage.DelShortURLs) error
 }
 
 type deleteBatchConfiger interface {
-	GetBaseAddr() string
+	GetTimeoutDuration() time.Duration
 	GetKey() string
 }
 
 type DeleteBatch struct {
-	strg  deleteBatchStorager
-	cfg   deleteBatchConfiger
-	chans chan chan storage.DelShortURLs
+	doneCtx context.Context
+	strg    deleteBatchStorager
+	cfg     deleteBatchConfiger
+	chans   chan chan storage.DelShortURLs
 }
 
-func NewDeleteBatchHandler(strg deleteBatchStorager, cfg deleteBatchConfiger) func(*fiber.Ctx) error {
+func NewDeleteBatchHandler(ctx context.Context, strg deleteBatchStorager, cfg deleteBatchConfiger) func(*fiber.Ctx) error {
 	delb := &DeleteBatch{
-		strg:  strg,
-		cfg:   cfg,
-		chans: make(chan chan storage.DelShortURLs),
+		doneCtx: ctx,
+		strg:    strg,
+		cfg:     cfg,
+		chans:   make(chan chan storage.DelShortURLs),
 	}
 
 	deleteBatchInit(delb)
@@ -45,20 +44,30 @@ func NewDeleteBatchHandler(strg deleteBatchStorager, cfg deleteBatchConfiger) fu
 }
 
 func deleteBatchInit(delb *DeleteBatch) {
-	mergedChan := mergeChans(delb.chans)
+	mergedChan := mergeChans(delb.doneCtx, delb.chans)
 	go delb.deleteBatchWorker(mergedChan)
 }
 
-func mergeChans(inChans <-chan chan storage.DelShortURLs) chan storage.DelShortURLs {
+func mergeChans(ctx context.Context, inChans <-chan chan storage.DelShortURLs) chan storage.DelShortURLs {
 	outChan := make(chan storage.DelShortURLs)
 
 	go func() {
 		for ch := range inChans {
-			go func(ch <-chan storage.DelShortURLs) {
-				for dShortURL := range ch {
-					outChan <- dShortURL
-				}
-			}(ch)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				go func(ch <-chan storage.DelShortURLs) {
+					for dShortURL := range ch {
+						select {
+						case <-ctx.Done():
+							return
+						default:
+							outChan <- dShortURL
+						}
+					}
+				}(ch)
+			}
 		}
 	}()
 
@@ -72,6 +81,8 @@ func (delb *DeleteBatch) deleteBatchWorker(inChan <-chan storage.DelShortURLs) {
 
 	for {
 		select {
+		case <-delb.doneCtx.Done():
+			return
 		case delShortURL := <-inChan:
 			delShortURLBatch = append(delShortURLBatch, delShortURL)
 		case <-tick.C:
@@ -79,16 +90,15 @@ func (delb *DeleteBatch) deleteBatchWorker(inChan <-chan storage.DelShortURLs) {
 				continue
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), batchDeletingTimeout)
+			ctx, cancel := context.WithTimeout(delb.doneCtx, delb.cfg.GetTimeoutDuration())
 			err := delb.strg.DeleteUserURLs(ctx, delShortURLBatch)
+			cancel()
 			if err != nil {
 				logger.Log.Info("Cannot delete batch",
 					zap.Error(err),
 				)
 				continue
 			}
-			cancel()
-
 			delShortURLBatch = nil
 		}
 	}
@@ -117,7 +127,12 @@ func (delb *DeleteBatch) makeChan(uid string, shortURLs []string) {
 	go func() {
 		defer close(ch)
 		for _, shortURL := range shortURLs {
-			ch <- storage.NewDelShortURLs(uid, shortURL)
+			select {
+			case <-delb.doneCtx.Done():
+				return
+			default:
+				ch <- storage.NewDelShortURLs(uid, shortURL)
+			}
 		}
 	}()
 

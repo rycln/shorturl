@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gofiber/contrib/fiberzap/v2"
@@ -26,13 +27,20 @@ type handlersSet struct {
 	deleteBatch   func(*fiber.Ctx) error
 }
 
-func newHandlersSet(cfg *config.Cfg) (*handlersSet, func() error) {
+type closeFunc func() error
+
+func newHandlersSet(cfg *config.Cfg) (*handlersSet, closeFunc) {
 	switch cfg.StorageIs() {
 	case "db":
 		logger.Log.Info("Storage configuration",
 			zap.String("db_dsn", cfg.GetDatabaseDsn()),
 		)
-		dbs, close := storage.NewDatabaseStorage(cfg.GetDatabaseDsn(), cfg.TimeoutDuration())
+		ctx, cancel := context.WithCancel(context.Background())
+		dbs, close := storage.NewDatabaseStorage(cfg.GetDatabaseDsn(), cfg.GetTimeoutDuration())
+		shutDown := func() error {
+			cancel()
+			return close()
+		}
 		return &handlersSet{
 			shorten:       handlers.NewShortenHandler(dbs, cfg, myhash.Base62),
 			retrieve:      handlers.NewRetrieveHandler(dbs),
@@ -40,8 +48,8 @@ func newHandlersSet(cfg *config.Cfg) (*handlersSet, func() error) {
 			shortenBatch:  handlers.NewShortenBatchHandler(dbs, cfg, myhash.Base62),
 			ping:          handlers.NewPingHandler(dbs),
 			retrieveBatch: handlers.NewRetrieveBatchHandler(dbs, cfg),
-			deleteBatch:   handlers.NewDeleteBatchHandler(dbs, cfg),
-		}, close
+			deleteBatch:   handlers.NewDeleteBatchHandler(ctx, dbs, cfg),
+		}, shutDown
 	case "file":
 		logger.Log.Info("Storage configuration",
 			zap.String("file_path", cfg.GetFilePath()),
@@ -72,9 +80,14 @@ func routing(app *fiber.App, cfg *config.Cfg, hs *handlersSet) {
 		Levels: []zapcore.Level{zapcore.InfoLevel},
 	}))
 
-	to := cfg.TimeoutDuration()
-	app.Post("/api/shorten/batch", timeout.NewWithContext(hs.shortenBatch, to))
-	app.Post("/api/shorten", timeout.NewWithContext(hs.apiShorten, to))
+	to := cfg.GetTimeoutDuration()
+
+	if hs.shortenBatch != nil {
+		app.Post("/api/shorten/batch", timeout.NewWithContext(hs.shortenBatch, to))
+	}
+	if hs.apiShorten != nil {
+		app.Post("/api/shorten", timeout.NewWithContext(hs.apiShorten, to))
+	}
 	if hs.retrieveBatch != nil {
 		app.Get("/api/user/urls", timeout.NewWithContext(hs.retrieveBatch, to))
 	}
@@ -84,8 +97,12 @@ func routing(app *fiber.App, cfg *config.Cfg, hs *handlersSet) {
 	if hs.ping != nil {
 		app.Get("/ping", timeout.NewWithContext(hs.ping, to))
 	}
-	app.Get("/:short", timeout.NewWithContext(hs.retrieve, to))
-	app.Post("/", timeout.NewWithContext(hs.shorten, to))
+	if hs.retrieve != nil {
+		app.Get("/:short", timeout.NewWithContext(hs.retrieve, to))
+	}
+	if hs.shorten != nil {
+		app.Post("/", timeout.NewWithContext(hs.shorten, to))
+	}
 
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,

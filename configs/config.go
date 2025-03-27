@@ -83,7 +83,7 @@ func (cfg *Cfg) StorageIs() string {
 	}
 }
 
-func (cfg *Cfg) TimeoutDuration() time.Duration {
+func (cfg *Cfg) GetTimeoutDuration() time.Duration {
 	return time.Duration(cfg.Timeout) * time.Second
 }
 
