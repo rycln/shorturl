@@ -17,13 +17,14 @@ type Ping struct {
 	strg pingStorager
 }
 
-func NewPing(strg pingStorager) *Ping {
-	return &Ping{
+func NewPingHandler(strg pingStorager) func(*fiber.Ctx) error {
+	p := &Ping{
 		strg: strg,
 	}
+	return p.handle
 }
 
-func (p *Ping) Handle(c *fiber.Ctx) error {
+func (p *Ping) handle(c *fiber.Ctx) error {
 	err := p.strg.Ping(c.UserContext())
 	if err != nil {
 		logger.Log.Info("path:"+c.Path()+", "+"func:PingContext()",

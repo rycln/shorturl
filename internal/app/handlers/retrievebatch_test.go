@@ -102,7 +102,7 @@ func TestRetrieveBatch_Handle(t *testing.T) {
 			}
 
 			app := fiber.New()
-			app.Get("/api/user/urls", timeout.NewWithContext(NewRetrieveBatch(mStrg, mCfg).Handle, testTimeoutDuration))
+			app.Get("/api/user/urls", timeout.NewWithContext(NewRetrieveBatchHandler(mStrg, mCfg), testTimeoutDuration))
 			app.Use(func(c *fiber.Ctx) error {
 				return c.SendStatus(http.StatusBadRequest)
 			})

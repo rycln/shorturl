@@ -91,7 +91,7 @@ func TestShortenBatch_Handle(t *testing.T) {
 			}
 
 			app := fiber.New()
-			app.Post("/api/shorten/batch", timeout.NewWithContext(NewShortenBatch(mStrg, mCfg, testHash).Handle, testTimeoutDuration))
+			app.Post("/api/shorten/batch", timeout.NewWithContext(NewShortenBatchHandler(mStrg, mCfg, testHash), testTimeoutDuration))
 			app.Use(func(c *fiber.Ctx) error {
 				return c.SendStatus(http.StatusBadRequest)
 			})

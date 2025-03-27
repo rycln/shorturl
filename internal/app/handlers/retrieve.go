@@ -19,13 +19,14 @@ type Retrieve struct {
 	strg retrieveStorager
 }
 
-func NewRetrieve(strg retrieveStorager) *Retrieve {
-	return &Retrieve{
+func NewRetrieveHandler(strg retrieveStorager) func(*fiber.Ctx) error {
+	r := &Retrieve{
 		strg: strg,
 	}
+	return r.handle
 }
 
-func (r *Retrieve) Handle(c *fiber.Ctx) error {
+func (r *Retrieve) handle(c *fiber.Ctx) error {
 	shortURL := c.Params("short")
 
 	origURL, err := r.strg.GetOrigURL(c.UserContext(), shortURL)

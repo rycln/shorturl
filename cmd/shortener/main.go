@@ -24,19 +24,14 @@ func main() {
 	)
 
 	app := fiber.New()
+	hs, closeStrg := newHandlersSet(cfg)
+	if closeStrg != nil {
+		defer closeStrg()
+	}
+	routing(app, cfg, hs)
 
-	switch cfg.StorageIs() {
-	case "db":
-		logger.Log.Info("Storage configuration",
-			zap.String("db_dsn", cfg.GetDatabaseDsn()),
-		)
-		startWithDatabaseStorage(app, cfg)
-	case "file":
-		logger.Log.Info("Storage configuration",
-			zap.String("file_path", cfg.GetFilePath()),
-		)
-		startWithFileStorage(app, cfg)
-	default:
-		startWithSimpleStorage(app, cfg)
+	err = app.Listen(cfg.GetServerAddr())
+	if err != nil {
+		log.Fatalf("Can't start the server: %v", err)
 	}
 }

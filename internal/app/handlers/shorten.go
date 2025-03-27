@@ -29,15 +29,16 @@ type Shorten struct {
 	hashFunc func(string) string
 }
 
-func NewShorten(strg shortenStorager, cfg shortenConfiger, hashFunc func(string) string) *Shorten {
-	return &Shorten{
+func NewShortenHandler(strg shortenStorager, cfg shortenConfiger, hashFunc func(string) string) func(*fiber.Ctx) error {
+	s := &Shorten{
 		strg:     strg,
 		cfg:      cfg,
 		hashFunc: hashFunc,
 	}
+	return s.handle
 }
 
-func (s *Shorten) Handle(c *fiber.Ctx) error {
+func (s *Shorten) handle(c *fiber.Ctx) error {
 	body := string(c.Body())
 	_, err := url.ParseRequestURI(body)
 	if err != nil {

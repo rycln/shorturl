@@ -76,7 +76,7 @@ func TestPing_Handle(t *testing.T) {
 			}
 
 			app := fiber.New()
-			app.Get("/ping", timeout.NewWithContext(NewPing(mStrg).Handle, testTimeoutDuration))
+			app.Get("/ping", timeout.NewWithContext(NewPingHandler(mStrg), testTimeoutDuration))
 			app.Use(func(c *fiber.Ctx) error {
 				return c.SendStatus(http.StatusBadRequest)
 			})

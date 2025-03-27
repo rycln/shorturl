@@ -84,7 +84,7 @@ func TestRetrieve_Handle(t *testing.T) {
 			}
 
 			app := fiber.New()
-			app.Get("/:short", timeout.NewWithContext(NewRetrieve(mStrg).Handle, testTimeoutDuration))
+			app.Get("/:short", timeout.NewWithContext(NewRetrieveHandler(mStrg), testTimeoutDuration))
 			app.Use(func(c *fiber.Ctx) error {
 				return c.SendStatus(http.StatusBadRequest)
 			})

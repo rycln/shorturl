@@ -28,12 +28,13 @@ type ShortenBatch struct {
 	hashFunc func(string) string
 }
 
-func NewShortenBatch(strg batchStorager, cfg batchConfiger, hashFunc func(string) string) *ShortenBatch {
-	return &ShortenBatch{
+func NewShortenBatchHandler(strg batchStorager, cfg batchConfiger, hashFunc func(string) string) func(*fiber.Ctx) error {
+	sb := &ShortenBatch{
 		strg:     strg,
 		cfg:      cfg,
 		hashFunc: hashFunc,
 	}
+	return sb.handle
 }
 
 type batchReq struct {
@@ -53,7 +54,7 @@ func newBatchRes(id, shortURL string) batchRes {
 	}
 }
 
-func (sb *ShortenBatch) Handle(c *fiber.Ctx) error {
+func (sb *ShortenBatch) handle(c *fiber.Ctx) error {
 	if !c.Is("json") {
 		return c.SendStatus(http.StatusBadRequest)
 	}

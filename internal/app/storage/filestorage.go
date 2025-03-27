@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 )
 
 type FileStorage struct {
@@ -11,19 +12,15 @@ type FileStorage struct {
 	encoder  *fileEncoder
 }
 
-func NewFileStorage(fileName string) (*FileStorage, error) {
+func NewFileStorage(fileName string) (*FileStorage, func() error) {
 	encoder, err := newFileEncoder(fileName)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Can't open file: %v", err)
 	}
 	return &FileStorage{
 		fileName: fileName,
 		encoder:  encoder,
-	}, nil
-}
-
-func (fs *FileStorage) Close() {
-	fs.encoder.close()
+	}, encoder.close
 }
 
 func (fs *FileStorage) AddURL(ctx context.Context, surl ShortenedURL) error {

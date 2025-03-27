@@ -30,12 +30,13 @@ type APIShorten struct {
 	hashFunc func(string) string
 }
 
-func NewAPIShorten(strg apiStorager, cfg apiConfiger, hashFunc func(string) string) *APIShorten {
-	return &APIShorten{
+func NewAPIShortenHandler(strg apiStorager, cfg apiConfiger, hashFunc func(string) string) func(*fiber.Ctx) error {
+	as := &APIShorten{
 		strg:     strg,
 		cfg:      cfg,
 		hashFunc: hashFunc,
 	}
+	return as.handle
 }
 
 type apiReq struct {
@@ -46,7 +47,7 @@ type apiRes struct {
 	Result string `json:"result"`
 }
 
-func (as *APIShorten) Handle(c *fiber.Ctx) error {
+func (as *APIShorten) handle(c *fiber.Ctx) error {
 	if !c.Is("json") {
 		return c.SendStatus(http.StatusBadRequest)
 	}

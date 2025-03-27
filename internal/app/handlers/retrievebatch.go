@@ -27,11 +27,12 @@ type RetrieveBatch struct {
 	cfg  retrieveBatchConfiger
 }
 
-func NewRetrieveBatch(strg retrieveBatchStorager, cfg retrieveBatchConfiger) *RetrieveBatch {
-	return &RetrieveBatch{
+func NewRetrieveBatchHandler(strg retrieveBatchStorager, cfg retrieveBatchConfiger) func(*fiber.Ctx) error {
+	rb := &RetrieveBatch{
 		strg: strg,
 		cfg:  cfg,
 	}
+	return rb.handle
 }
 
 type retBatchRes struct {
@@ -46,7 +47,7 @@ func newRetBatchRes(shortURL, origURL string) retBatchRes {
 	}
 }
 
-func (rb *RetrieveBatch) Handle(c *fiber.Ctx) error {
+func (rb *RetrieveBatch) handle(c *fiber.Ctx) error {
 	key := rb.cfg.GetKey()
 	_, uid, err := getTokenAndUID(c, key)
 	if err != nil {

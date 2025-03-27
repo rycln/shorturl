@@ -100,7 +100,7 @@ func TestShorten_Handle(t *testing.T) {
 			}
 
 			app := fiber.New()
-			app.Post("/", timeout.NewWithContext(NewShorten(mStrg, mCfg, testHash).Handle, testTimeoutDuration))
+			app.Post("/", timeout.NewWithContext(NewShortenHandler(mStrg, mCfg, testHash), testTimeoutDuration))
 			app.Use(func(c *fiber.Ctx) error {
 				return c.SendStatus(http.StatusBadRequest)
 			})

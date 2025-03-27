@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -18,7 +19,7 @@ const (
 	maxConnLifetime = 0 //unlimited
 )
 
-func NewDB(dsn string) (*sql.DB, error) {
+func newDB(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
@@ -26,7 +27,7 @@ func NewDB(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
-func InitDB(db *sql.DB, timeout time.Duration) error {
+func initDB(db *sql.DB, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	_, err := db.ExecContext(ctx, sqlCreateURLsTable)
@@ -44,10 +45,19 @@ type DatabaseStorage struct {
 	db *sql.DB
 }
 
-func NewDatabaseStorage(db *sql.DB) *DatabaseStorage {
+func NewDatabaseStorage(dsn string, timeout time.Duration) (*DatabaseStorage, func() error) {
+	db, err := newDB(dsn)
+	if err != nil {
+		log.Fatalf("Can't open database: %v", err)
+	}
+
+	err = initDB(db, timeout)
+	if err != nil {
+		log.Fatalf("Can't init database: %v", err)
+	}
 	return &DatabaseStorage{
 		db: db,
-	}
+	}, db.Close
 }
 
 func (dbs *DatabaseStorage) AddURL(ctx context.Context, surl ShortenedURL) error {

@@ -32,7 +32,7 @@ type DeleteBatch struct {
 	chans chan chan storage.DelShortURLs
 }
 
-func NewDeleteBatch(strg deleteBatchStorager, cfg deleteBatchConfiger) *DeleteBatch {
+func NewDeleteBatchHandler(strg deleteBatchStorager, cfg deleteBatchConfiger) func(*fiber.Ctx) error {
 	delb := &DeleteBatch{
 		strg:  strg,
 		cfg:   cfg,
@@ -41,7 +41,7 @@ func NewDeleteBatch(strg deleteBatchStorager, cfg deleteBatchConfiger) *DeleteBa
 
 	deleteBatchInit(delb)
 
-	return delb
+	return delb.handle
 }
 
 func deleteBatchInit(delb *DeleteBatch) {
@@ -94,7 +94,7 @@ func (delb *DeleteBatch) deleteBatchWorker(inChan <-chan storage.DelShortURLs) {
 	}
 }
 
-func (delb *DeleteBatch) Handle(c *fiber.Ctx) error {
+func (delb *DeleteBatch) handle(c *fiber.Ctx) error {
 	key := delb.cfg.GetKey()
 	_, uid, err := getTokenAndUID(c, key)
 	if err != nil {

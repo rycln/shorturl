@@ -87,9 +87,10 @@ func TestFileStorageAddURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fileName := "test"
-			strg, err := NewFileStorage(fileName)
-			require.NoError(t, err)
+			strg, close := NewFileStorage(fileName)
 			defer os.Remove(fileName)
+			defer close()
+
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var err error
 				for i := range test.shortURLs {
@@ -156,9 +157,10 @@ func TestFileStorageAddBatchURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fileName := "test"
-			strg, err := NewFileStorage(fileName)
-			require.NoError(t, err)
+			strg, close := NewFileStorage(fileName)
 			defer os.Remove(fileName)
+			defer close()
+
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var surls = make([]ShortenedURL, len(test.shortURLs))
 				var err error
@@ -239,9 +241,9 @@ func TestFileStorageGetOrigURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fileName := "test"
-			strg, err := NewFileStorage(fileName)
-			require.NoError(t, err)
+			strg, close := NewFileStorage(fileName)
 			defer os.Remove(fileName)
+			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
@@ -311,9 +313,9 @@ func TestFileStorageGetShortURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fileName := "test"
-			strg, err := NewFileStorage(fileName)
-			require.NoError(t, err)
+			strg, close := NewFileStorage(fileName)
 			defer os.Remove(fileName)
+			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
@@ -406,9 +408,9 @@ func TestFileStorageGetAllUserURLs(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fileName := "test"
-			strg, err := NewFileStorage(fileName)
-			require.NoError(t, err)
+			strg, close := NewFileStorage(fileName)
 			defer os.Remove(fileName)
+			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				for i := range test.shortURLs {
