@@ -86,9 +86,8 @@ func TestFileStorageAddURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fileName := "test"
-			strg, close := NewFileStorage(fileName)
-			defer os.Remove(fileName)
+			strg, close := NewFileStorage(testFileName)
+			defer os.Remove(testFileName)
 			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
@@ -102,7 +101,7 @@ func TestFileStorageAddURL(t *testing.T) {
 				}
 				for k, v := range test.want.mustContain {
 					var origURL string
-					fd, err := newFileDecoder(fileName)
+					fd, err := newFileDecoder(testFileName)
 					require.NoError(t, err)
 					defer fd.close()
 					for {
@@ -156,9 +155,8 @@ func TestFileStorageAddBatchURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fileName := "test"
-			strg, close := NewFileStorage(fileName)
-			defer os.Remove(fileName)
+			strg, close := NewFileStorage(testFileName)
+			defer os.Remove(testFileName)
 			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
@@ -174,7 +172,7 @@ func TestFileStorageAddBatchURL(t *testing.T) {
 				}
 				for k, v := range test.want.mustContain {
 					var origURL string
-					fd, err := newFileDecoder(fileName)
+					fd, err := newFileDecoder(testFileName)
 					require.NoError(t, err)
 					defer fd.close()
 					for {
@@ -240,9 +238,8 @@ func TestFileStorageGetOrigURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fileName := "test"
-			strg, close := NewFileStorage(fileName)
-			defer os.Remove(fileName)
+			strg, close := NewFileStorage(testFileName)
+			defer os.Remove(testFileName)
 			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
@@ -312,9 +309,8 @@ func TestFileStorageGetShortURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fileName := "test"
-			strg, close := NewFileStorage(fileName)
-			defer os.Remove(fileName)
+			strg, close := NewFileStorage(testFileName)
+			defer os.Remove(testFileName)
 			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
@@ -407,9 +403,8 @@ func TestFileStorageGetAllUserURLs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fileName := "test"
-			strg, close := NewFileStorage(fileName)
-			defer os.Remove(fileName)
+			strg, close := NewFileStorage(testFileName)
+			defer os.Remove(testFileName)
 			defer close()
 
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
