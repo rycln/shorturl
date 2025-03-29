@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/rand"
 	"flag"
 	"time"
 
@@ -11,6 +12,7 @@ const (
 	defaultServerAddr = ":8080"
 	defaultBaseAddr   = "http://localhost:8080"
 	defultTimeout     = 2
+	defaultKeyLength  = 10
 )
 
 type Cfg struct {
@@ -19,6 +21,7 @@ type Cfg struct {
 	StorageFilePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDsn     string `env:"DATABASE_DSN"`
 	Timeout         int    `env:"TIMEOUT_DUR"`
+	Key             string `env:"KEY"`
 }
 
 func NewCfg() *Cfg {
@@ -29,6 +32,7 @@ func NewCfg() *Cfg {
 	flag.StringVar(&cfg.StorageFilePath, "f", "", "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
 	flag.StringVar(&cfg.DatabaseDsn, "d", "", "Database connection address (environment variable DATABASE_DSN has higher priority)")
 	flag.IntVar(&cfg.Timeout, "t", defultTimeout, "Timeout duration in seconds (environment variable TIMEOUT_DUR has higher priority)")
+	flag.StringVar(&cfg.Key, "k", "", "Key for jwt autorization (environment variable KEY has higher priority)")
 	flag.Parse()
 
 	err := env.Parse(cfg)
@@ -36,7 +40,20 @@ func NewCfg() *Cfg {
 		panic(err)
 	}
 
+	if cfg.Key == "" {
+		cfg.Key = generateKey(defaultKeyLength)
+	}
+
 	return cfg
+}
+
+func generateKey(n int) string {
+	key := make([]byte, n)
+	_, err := rand.Read(key)
+	if err != nil {
+		panic(err)
+	}
+	return string(key)
 }
 
 func (cfg *Cfg) GetServerAddr() string {
@@ -66,6 +83,10 @@ func (cfg *Cfg) StorageIs() string {
 	}
 }
 
-func (cfg *Cfg) TimeoutDuration() time.Duration {
+func (cfg *Cfg) GetTimeoutDuration() time.Duration {
 	return time.Duration(cfg.Timeout) * time.Second
+}
+
+func (cfg *Cfg) GetKey() string {
+	return cfg.Key
 }

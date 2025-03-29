@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 )
 
 type FileStorage struct {
@@ -11,19 +12,15 @@ type FileStorage struct {
 	encoder  *fileEncoder
 }
 
-func NewFileStorage(fileName string) (*FileStorage, error) {
+func NewFileStorage(fileName string) (*FileStorage, func() error) {
 	encoder, err := newFileEncoder(fileName)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Can't open file: %v", err)
 	}
 	return &FileStorage{
 		fileName: fileName,
 		encoder:  encoder,
-	}, nil
-}
-
-func (fs *FileStorage) Close() {
-	fs.encoder.close()
+	}, encoder.close
 }
 
 func (fs *FileStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
@@ -73,13 +70,14 @@ func (fs *FileStorage) getFromFile(ctx context.Context, url string) (*ShortenedU
 		return nil, err
 	}
 	defer fd.close()
+
 	for {
 		surl := &ShortenedURL{}
 		err := fd.decoder.Decode(surl)
+		if err == io.EOF {
+			return nil, ErrNotExist
+		}
 		if err != nil {
-			if err == io.EOF {
-				return nil, ErrNotExist
-			}
 			return nil, err
 		}
 		if surl.ShortURL == url || surl.OrigURL == url {
@@ -94,6 +92,34 @@ func (fs *FileStorage) getFromFile(ctx context.Context, url string) (*ShortenedU
 	}
 }
 
-func (fs *FileStorage) Ping(ctx context.Context) error {
-	return ErrNotDatabase
+func (fs *FileStorage) GetAllUserURLs(ctx context.Context, uid string) ([]ShortenedURL, error) {
+	fd, err := newFileDecoder(fs.fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.close()
+
+	var surls []ShortenedURL
+	for {
+		surl := &ShortenedURL{}
+		err := fd.decoder.Decode(surl)
+		if err == io.EOF {
+			if surls == nil {
+				return nil, ErrNotExist
+			}
+			return surls, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if surl.UserID == uid {
+			surls = append(surls, *surl)
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ErrTimeLimit
+		default:
+			continue
+		}
+	}
 }

@@ -88,7 +88,7 @@ func TestSimpleStorageAddURL(t *testing.T) {
 			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
 				var err error
 				for i := range test.shortURLs {
-					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					err = strg.AddURL(context.Background(), surl)
 				}
 				if test.want.wantErr {
@@ -143,7 +143,7 @@ func TestSimpleStorageAddBatchURL(t *testing.T) {
 				var surls = make([]ShortenedURL, len(test.shortURLs))
 				var err error
 				for i := range test.shortURLs {
-					surl := NewShortenedURL(test.shortURLs[i], test.origURLs[i])
+					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
 					surls[i] = surl
 				}
 				err = strg.AddBatchURL(context.Background(), surls)
