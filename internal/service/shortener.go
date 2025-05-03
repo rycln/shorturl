@@ -6,15 +6,20 @@ import (
 	"github.com/rycln/shorturl/internal/models"
 )
 
-type URLSaver interface {
+type urlSaver interface {
 	AddURLPair(context.Context, *models.URLPair) error
 }
 
-type URLFetcher interface {
+type urlFetcher interface {
 	GetURLPairByShort(context.Context, models.ShortURL) (*models.URLPair, error)
 }
 
-type Hasher interface {
+type ShortenerStorager interface {
+	urlSaver
+	urlFetcher
+}
+
+type hasher interface {
 	GenerateHashFromURL(models.OrigURL) models.ShortURL
 }
 
@@ -24,15 +29,14 @@ type errConflict interface {
 }
 
 type Shortener struct {
-	saver   URLSaver
-	fetcher URLFetcher
-	hasher  Hasher
+	strg   ShortenerStorager
+	hasher hasher
 }
 
-func NewShortener(saver URLSaver, fetcher URLFetcher) *Shortener {
+func NewShortener(strg ShortenerStorager, hasher hasher) *Shortener {
 	return &Shortener{
-		saver:   saver,
-		fetcher: fetcher,
+		strg:   strg,
+		hasher: hasher,
 	}
 }
 
@@ -42,7 +46,7 @@ func (s *Shortener) ShortenURL(ctx context.Context, orig models.OrigURL) (*model
 		Short: short,
 		Orig:  orig,
 	}
-	err := s.saver.AddURLPair(ctx, pair)
+	err := s.strg.AddURLPair(ctx, pair)
 	if e, ok := err.(errConflict); ok && e.IsConflict() {
 		return pair, err
 	}
@@ -53,7 +57,7 @@ func (s *Shortener) ShortenURL(ctx context.Context, orig models.OrigURL) (*model
 }
 
 func (s *Shortener) GetOrigURLByShort(ctx context.Context, short models.ShortURL) (models.OrigURL, error) {
-	pair, err := s.fetcher.GetURLPairByShort(ctx, short)
+	pair, err := s.strg.GetURLPairByShort(ctx, short)
 	if err != nil {
 		return "", err
 	}
