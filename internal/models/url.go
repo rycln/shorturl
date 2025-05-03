@@ -9,3 +9,8 @@ type URLPair struct {
 	Short ShortURL
 	Orig  OrigURL
 }
+
+type DelURLReq struct {
+	UID   UserID
+	Short ShortURL
+}
