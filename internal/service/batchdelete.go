@@ -1,20 +1,30 @@
 package service
 
-import "github.com/rycln/shorturl/internal/models"
+import (
+	"context"
+
+	"github.com/rycln/shorturl/internal/models"
+)
+
+type BatchDeleteStorage interface {
+	DeleteRequestedURLs(context.Context, []models.DelURLReq) error
+}
 
 type BatchDelete struct {
+	strg     BatchDeleteStorage
 	delChans chan chan *models.DelURLReq
 	cancelCh chan struct{}
 }
 
-func NewBatchDelete(delChans chan chan *models.DelURLReq, cancelCh chan struct{}) *BatchDelete {
+func NewBatchDelete(strg BatchDeleteStorage, delChans chan chan *models.DelURLReq, cancelCh chan struct{}) *BatchDelete {
 	return &BatchDelete{
+		strg:     strg,
 		delChans: delChans,
 		cancelCh: cancelCh,
 	}
 }
 
-func (s *BatchDelete) DeleteUserURLsByShorts(uid models.UserID, shorts []models.ShortURL) {
+func (s *BatchDelete) UserURLsAsyncDeletion(uid models.UserID, shorts []models.ShortURL) {
 	delCh := make(chan *models.DelURLReq)
 
 	go func() {
@@ -33,4 +43,12 @@ func (s *BatchDelete) DeleteUserURLsByShorts(uid models.UserID, shorts []models.
 	}()
 
 	s.delChans <- delCh
+}
+
+func (s *BatchDelete) DeleteURLsBatch(ctx context.Context, urls []models.DelURLReq) error {
+	err := s.strg.DeleteRequestedURLs(ctx, urls)
+	if err != nil {
+		return err
+	}
+	return nil
 }

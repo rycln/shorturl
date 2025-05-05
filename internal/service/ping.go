@@ -2,22 +2,22 @@ package service
 
 import "context"
 
-type StoragePinger interface {
+type PingStorage interface {
 	Ping(context.Context) error
 }
 
 type Ping struct {
-	sping StoragePinger
+	strg PingStorage
 }
 
-func NewPing(sping StoragePinger) *Ping {
+func NewPing(strg PingStorage) *Ping {
 	return &Ping{
-		sping: sping,
+		strg: strg,
 	}
 }
 
 func (s *Ping) PingStorage(ctx context.Context) error {
-	err := s.sping.Ping(ctx)
+	err := s.strg.Ping(ctx)
 	if err != nil {
 		return err
 	}

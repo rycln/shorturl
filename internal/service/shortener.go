@@ -14,7 +14,7 @@ type urlFetcher interface {
 	GetURLPairByShort(context.Context, models.ShortURL) (*models.URLPair, error)
 }
 
-type ShortenerStorager interface {
+type ShortenerStorage interface {
 	urlSaver
 	urlFetcher
 }
@@ -29,11 +29,11 @@ type errConflict interface {
 }
 
 type Shortener struct {
-	strg   ShortenerStorager
+	strg   ShortenerStorage
 	hasher hasher
 }
 
-func NewShortener(strg ShortenerStorager, hasher hasher) *Shortener {
+func NewShortener(strg ShortenerStorage, hasher hasher) *Shortener {
 	return &Shortener{
 		strg:   strg,
 		hasher: hasher,

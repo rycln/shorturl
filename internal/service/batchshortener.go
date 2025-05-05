@@ -14,7 +14,7 @@ type batchURLFetcher interface {
 	GetURLPairBatchByUserID(context.Context, models.UserID) ([]models.URLPair, error)
 }
 
-type BatchShortenerStorager interface {
+type BatchShortenerStorage interface {
 	batchURLSaver
 	batchURLFetcher
 }
@@ -24,11 +24,11 @@ type batchHasher interface {
 }
 
 type BatchShortener struct {
-	strg   BatchShortenerStorager
+	strg   BatchShortenerStorage
 	hasher batchHasher
 }
 
-func NewBatchShortener(strg BatchShortenerStorager, hasher batchHasher) *BatchShortener {
+func NewBatchShortener(strg BatchShortenerStorage, hasher batchHasher) *BatchShortener {
 	return &BatchShortener{
 		strg:   strg,
 		hasher: hasher,
