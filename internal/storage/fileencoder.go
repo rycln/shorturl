@@ -3,11 +3,13 @@ package storage
 import (
 	"encoding/json"
 	"os"
+
+	"github.com/rycln/shorturl/internal/models"
 )
 
 type fileEncoder struct {
-	file    *os.File
-	encoder *json.Encoder
+	*json.Encoder
+	file *os.File
 }
 
 func newFileEncoder(fileName string) (*fileEncoder, error) {
@@ -18,14 +20,17 @@ func newFileEncoder(fileName string) (*fileEncoder, error) {
 
 	return &fileEncoder{
 		file:    file,
-		encoder: json.NewEncoder(file),
+		Encoder: json.NewEncoder(file),
 	}, nil
 }
 
-func (fe *fileEncoder) close() error {
-	return fe.file.Close()
+func (f *fileEncoder) close() error {
+	return f.file.Close()
 }
 
-func (fe *fileEncoder) writeIntoFile(surl *ShortenedURL) error {
-	return fe.encoder.Encode(surl)
+func (s *FileStorage) writeIntoFile(pair *models.URLPair) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.enc.Encode(pair)
 }

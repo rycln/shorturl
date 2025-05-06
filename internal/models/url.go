@@ -10,6 +10,11 @@ type URLPair struct {
 	Orig  OrigURL  `json:"original_url"`
 }
 
+type SavedURLPair struct {
+	URLPair
+	IsDeleted bool `json:"is_deleted"`
+}
+
 type DelURLReq struct {
 	UID   UserID
 	Short ShortURL
