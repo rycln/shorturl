@@ -1,4 +1,4 @@
-package appmem
+package storage
 
 import (
 	"context"

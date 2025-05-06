@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"log"
+
+	"github.com/rycln/shorturl/internal/models"
 )
 
 type FileStorage struct {
@@ -12,7 +14,7 @@ type FileStorage struct {
 	encoder  *fileEncoder
 }
 
-func NewFileStorage(fileName string) (*FileStorage, func() error) {
+func NewFileStorage(fileName string) *FileStorage {
 	encoder, err := newFileEncoder(fileName)
 	if err != nil {
 		log.Fatalf("Can't open file: %v", err)
@@ -20,11 +22,11 @@ func NewFileStorage(fileName string) (*FileStorage, func() error) {
 	return &FileStorage{
 		fileName: fileName,
 		encoder:  encoder,
-	}, encoder.close
+	}
 }
 
-func (fs *FileStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
-	_, err := fs.getFromFile(ctx, surl.OrigURL)
+func (s *FileStorage) AddURLPair(ctx context.Context, pair *models.URLPair) error {
+	_, err := s.getFromFile(ctx, surl.OrigURL)
 	if err != nil {
 		if errors.Is(err, ErrNotExist) {
 			err := fs.encoder.writeIntoFile(&surl)
@@ -122,4 +124,10 @@ func (fs *FileStorage) GetAllUserURLs(ctx context.Context, uid string) ([]Shorte
 			continue
 		}
 	}
+}
+
+func (s *FileStorage) Ping(context.Context) error { return nil }
+
+func (s *FileStorage) Close() {
+	s.encoder.close()
 }

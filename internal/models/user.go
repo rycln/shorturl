@@ -1,3 +1,3 @@
 package models
 
-type UserID int64
+type UserID string
