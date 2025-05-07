@@ -7,7 +7,6 @@ import (
 var (
 	ErrConflict   = errors.New("shortened URL already exists")
 	ErrNotExist   = errors.New("shortened URL does not exist")
-	ErrTimeLimit  = errors.New("time limit exceeded")
 	ErrDeletedURL = errors.New("URL removed")
 )
 
@@ -51,6 +50,28 @@ func (err *errNotExist) IsErrNotExist() bool {
 
 func newErrNotExist(err error) error {
 	return &errNotExist{
+		err: err,
+	}
+}
+
+type errDeletedURL struct {
+	err error
+}
+
+func (err *errDeletedURL) Error() string {
+	return err.err.Error()
+}
+
+func (err *errDeletedURL) Unwrap() error {
+	return err.err
+}
+
+func (err *errDeletedURL) IsErrDeletedURL() bool {
+	return true
+}
+
+func newErrDeletedURL(err error) error {
+	return &errDeletedURL{
 		err: err,
 	}
 }

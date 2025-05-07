@@ -8,13 +8,15 @@ import (
 )
 
 type AppMemStorage struct {
-	mu    sync.RWMutex
-	pairs map[models.UserID]map[models.ShortURL]models.OrigURL
+	mu      sync.RWMutex
+	pairs   map[models.UserID]map[models.ShortURL]models.OrigURL
+	deleted map[models.ShortURL]struct{}
 }
 
 func NewAppMemStorage() *AppMemStorage {
 	return &AppMemStorage{
-		pairs: make(map[models.UserID]map[models.ShortURL]models.OrigURL),
+		pairs:   make(map[models.UserID]map[models.ShortURL]models.OrigURL),
+		deleted: make(map[models.ShortURL]struct{}),
 	}
 }
 
@@ -51,6 +53,11 @@ func (s *AppMemStorage) AddURLPair(ctx context.Context, pair *models.URLPair) er
 func (s *AppMemStorage) GetURLPairByShort(ctx context.Context, short models.ShortURL) (*models.URLPair, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	_, ok := s.deleted[short]
+	if ok {
+		return nil, newErrDeletedURL(ErrDeletedURL)
+	}
 
 	for uid, userpairs := range s.pairs {
 		select {
@@ -138,7 +145,7 @@ func (s *AppMemStorage) DeleteRequestedURLs(ctx context.Context, delurls []model
 		default:
 		}
 
-		delete(s.pairs[delurl.UID], delurl.Short)
+		s.deleted[delurl.Short] = struct{}{}
 	}
 
 	return nil
