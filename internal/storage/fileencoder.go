@@ -28,9 +28,28 @@ func (f *fileEncoder) close() error {
 	return f.file.Close()
 }
 
-func (s *FileStorage) writeIntoFile(pair *models.URLPair) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *FileStorage) writeIntoStrgFile(pair *models.URLPair) error {
+	s.strgMu.Lock()
+	defer s.strgMu.Unlock()
 
-	return s.enc.Encode(pair)
+	enc, err := newFileEncoder(s.strgFileName)
+	if err != nil {
+		return err
+	}
+	defer enc.close()
+
+	return enc.Encode(pair)
+}
+
+func (s *FileStorage) writeIntoDelFile(delReq *models.DelURLReq) error {
+	s.delMu.Lock()
+	defer s.delMu.Unlock()
+
+	enc, err := newFileEncoder(s.delFileName)
+	if err != nil {
+		return err
+	}
+	defer enc.close()
+
+	return enc.Encode(delReq)
 }

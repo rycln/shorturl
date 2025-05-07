@@ -14,16 +14,8 @@ type fileDecoder struct {
 	file *os.File
 }
 
-type fileDecoderFactory struct {
-	fileName string
-}
-
-func newFileDecoderFactory(fileName string) *fileDecoderFactory {
-	return &fileDecoderFactory{fileName: fileName}
-}
-
-func (f *fileDecoderFactory) newFileDecoder() (*fileDecoder, error) {
-	file, err := os.Open(f.fileName)
+func newFileDecoder(fileName string) (*fileDecoder, error) {
+	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -39,10 +31,10 @@ func (f *fileDecoder) close() error {
 }
 
 func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL) (*models.URLPair, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.strgMu.Lock()
+	defer s.strgMu.Unlock()
 
-	fd, err := s.decFactory.newFileDecoder()
+	fd, err := newFileDecoder(s.strgFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -70,43 +62,11 @@ func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL)
 	}
 }
 
-func (s *FileStorage) getPairByOrig(ctx context.Context, orig models.OrigURL) (*models.URLPair, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	fd, err := s.decFactory.newFileDecoder()
-	if err != nil {
-		return nil, err
-	}
-	defer fd.close()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-
-		pair := &models.URLPair{}
-		err := fd.Decode(pair)
-		if err == io.EOF {
-			return nil, ErrNotExist
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		if pair.Orig == orig {
-			return pair, nil
-		}
-	}
-}
-
 func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([]models.URLPair, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.strgMu.Lock()
+	defer s.strgMu.Unlock()
 
-	fd, err := s.decFactory.newFileDecoder()
+	fd, err := newFileDecoder(s.strgFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +95,38 @@ func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([
 
 		if pair.UID == uid {
 			userpairs = append(userpairs, *pair)
+		}
+	}
+}
+
+func (s *FileStorage) shortIsDeleted(ctx context.Context, short models.ShortURL) (bool, error) {
+	s.delMu.Lock()
+	defer s.delMu.Unlock()
+
+	fd, err := newFileDecoder(s.delFileName)
+	if err != nil {
+		return false, err
+	}
+	defer fd.close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		default:
+		}
+
+		deleted := &models.DelURLReq{}
+		err := fd.Decode(deleted)
+		if err == io.EOF {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+
+		if deleted.Short == short {
+			return true, nil
 		}
 	}
 }

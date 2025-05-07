@@ -14,6 +14,8 @@ type Storage interface {
 
 func Factory(cfg *StorageConfig) Storage {
 	switch cfg.strgType {
+	case "file":
+		return NewFileStorage(cfg.filePath)
 	default:
 		return NewAppMemStorage()
 	}

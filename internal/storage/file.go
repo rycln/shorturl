@@ -3,36 +3,32 @@ package storage
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 
 	"github.com/rycln/shorturl/internal/models"
 )
 
 type FileStorage struct {
-	mu         sync.Mutex
-	enc        *fileEncoder
-	decFactory *fileDecoderFactory
+	strgMu       sync.Mutex
+	delMu        sync.Mutex
+	strgFileName string
+	delFileName  string
 }
 
 func NewFileStorage(fileName string) *FileStorage {
-	enc, err := newFileEncoder(fileName)
-	if err != nil {
-		log.Fatalf("Can't open file: %v", err)
-	}
 
-	decFactory := newFileDecoderFactory(fileName)
+	delFileName := fileName + "_deleted"
 
 	return &FileStorage{
-		enc:        enc,
-		decFactory: decFactory,
+		strgFileName: fileName,
+		delFileName:  delFileName,
 	}
 }
 
 func (s *FileStorage) AddURLPair(ctx context.Context, pair *models.URLPair) error {
-	_, err := s.getPairByOrig(ctx, pair.Orig)
+	_, err := s.getPairByShort(ctx, pair.Short)
 	if errors.Is(err, ErrNotExist) {
-		err := s.writeIntoFile(pair)
+		err := s.writeIntoStrgFile(pair)
 		if err != nil {
 			return err
 		}
@@ -45,6 +41,11 @@ func (s *FileStorage) AddURLPair(ctx context.Context, pair *models.URLPair) erro
 }
 
 func (s *FileStorage) GetURLPairByShort(ctx context.Context, short models.ShortURL) (*models.URLPair, error) {
+	deleted, err := s.shortIsDeleted(ctx, short)
+	if deleted {
+		return nil, newErrDeletedURL(ErrDeletedURL)
+	}
+
 	pair, err := s.getPairByShort(ctx, short)
 	if err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func (s *FileStorage) GetURLPairByShort(ctx context.Context, short models.ShortU
 
 func (s *FileStorage) AddBatchURLPairs(ctx context.Context, pairs []models.URLPair) error {
 	for _, pair := range pairs {
-		err := s.writeIntoFile(&pair)
+		err := s.writeIntoStrgFile(&pair)
 		if err != nil {
 			return err
 		}
@@ -67,11 +68,15 @@ func (s *FileStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.Us
 }
 
 func (s *FileStorage) DeleteRequestedURLs(ctx context.Context, delurls []models.DelURLReq) error {
-
+	for _, delurl := range delurls {
+		err := s.writeIntoDelFile(&delurl)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *FileStorage) Ping(context.Context) error { return nil }
 
-func (s *FileStorage) Close() {
-	s.enc.close()
-}
+func (s *FileStorage) Close() {}
