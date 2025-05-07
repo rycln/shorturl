@@ -1,4 +1,4 @@
-package db
+package storage
 
 import (
 	"context"
@@ -19,6 +19,19 @@ const (
 	maxConnLifetime = 0 //unlimited
 )
 
+func NewDB(uri string) (*sql.DB, error) {
+	database, err := sql.Open("pgx", uri)
+	if err != nil {
+		return nil, err
+	}
+	database.SetMaxOpenConns(maxOpenConns)
+	database.SetMaxIdleConns(maxIdleConns)
+	database.SetConnMaxIdleTime(maxIdleTime)
+	database.SetConnMaxLifetime(maxConnLifetime)
+
+	return database, nil
+}
+
 func newDB(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -27,37 +40,19 @@ func newDB(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
-func initDB(db *sql.DB, timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	_, err := db.ExecContext(ctx, sqlCreateURLsTable)
-	if err != nil {
-		return err
-	}
-	db.SetMaxOpenConns(maxOpenConns)
-	db.SetMaxIdleConns(maxIdleConns)
-	db.SetConnMaxIdleTime(maxIdleTime)
-	db.SetConnMaxLifetime(maxConnLifetime)
-	return nil
-}
-
 type DatabaseStorage struct {
 	db *sql.DB
 }
 
-func NewDatabaseStorage(dsn string, timeout time.Duration) (*DatabaseStorage, func() error) {
+func NewDatabaseStorage(dsn string, timeout time.Duration) *DatabaseStorage {
 	db, err := newDB(dsn)
 	if err != nil {
 		log.Fatalf("Can't open database: %v", err)
 	}
 
-	err = initDB(db, timeout)
-	if err != nil {
-		log.Fatalf("Can't init database: %v", err)
-	}
 	return &DatabaseStorage{
 		db: db,
-	}, db.Close
+	}
 }
 
 func (dbs *DatabaseStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
