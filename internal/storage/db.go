@@ -1,14 +1,9 @@
 package storage
 
 import (
-	"context"
 	"database/sql"
-	"errors"
-	"log"
 	"time"
 
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -19,148 +14,16 @@ const (
 	maxConnLifetime = 0 //unlimited
 )
 
-func NewDB(uri string) (*sql.DB, error) {
-	database, err := sql.Open("pgx", uri)
+func NewDB(dsn string) (*sql.DB, error) {
+	database, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
+
 	database.SetMaxOpenConns(maxOpenConns)
 	database.SetMaxIdleConns(maxIdleConns)
 	database.SetConnMaxIdleTime(maxIdleTime)
 	database.SetConnMaxLifetime(maxConnLifetime)
 
 	return database, nil
-}
-
-func newDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-type DatabaseStorage struct {
-	db *sql.DB
-}
-
-func NewDatabaseStorage(dsn string, timeout time.Duration) *DatabaseStorage {
-	db, err := newDB(dsn)
-	if err != nil {
-		log.Fatalf("Can't open database: %v", err)
-	}
-
-	return &DatabaseStorage{
-		db: db,
-	}
-}
-
-func (dbs *DatabaseStorage) AddURL(ctx context.Context, surl ShortenedURL) error {
-	tx, err := dbs.db.Begin()
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, sqlInsertURL, surl.UserID, surl.ShortURL, surl.OrigURL)
-	if err != nil {
-		tx.Rollback()
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return ErrConflict
-		}
-		return err
-	}
-	return tx.Commit()
-}
-
-func (dbs *DatabaseStorage) AddBatchURL(ctx context.Context, surls []ShortenedURL) error {
-	tx, err := dbs.db.Begin()
-	if err != nil {
-		return err
-	}
-	for _, surl := range surls {
-		_, err := tx.ExecContext(ctx, sqlInsertURL, surl.UserID, surl.ShortURL, surl.OrigURL)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-	return tx.Commit()
-}
-
-func (dbs *DatabaseStorage) GetOrigURL(ctx context.Context, shortURL string) (string, error) {
-	row := dbs.db.QueryRowContext(ctx, sqlGetOrigURL, shortURL)
-	var origURL string
-	var isDeleted bool
-	err := row.Scan(&origURL, &isDeleted)
-	if err != nil {
-		return "", err
-	}
-	if isDeleted {
-		return "", ErrDeletedURL
-	}
-	return origURL, nil
-}
-
-func (dbs *DatabaseStorage) GetShortURL(ctx context.Context, origURL string) (string, error) {
-	row := dbs.db.QueryRowContext(ctx, sqlGetShortURL, origURL)
-	var shortURL string
-	err := row.Scan(&shortURL)
-	if err != nil {
-		return "", err
-	}
-	return shortURL, nil
-}
-
-func (dbs *DatabaseStorage) Ping(ctx context.Context) error {
-	if err := dbs.db.PingContext(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (dbs *DatabaseStorage) GetAllUserURLs(ctx context.Context, uid string) ([]ShortenedURL, error) {
-	rows, err := dbs.db.QueryContext(ctx, sqlGetAllUserURLs, uid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var surls []ShortenedURL
-	for rows.Next() {
-		var surl ShortenedURL
-		err = rows.Scan(&surl.UserID, &surl.ShortURL, &surl.OrigURL)
-		if err != nil {
-			return nil, err
-		}
-		surls = append(surls, surl)
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-	if surls == nil {
-		return nil, ErrNotExist
-	}
-	return surls, nil
-}
-
-func (dbs *DatabaseStorage) DeleteUserURLs(ctx context.Context, dsurls []DelShortURLs) error {
-	tx, err := dbs.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.PrepareContext(ctx, sqlDeleteUserURLs)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	defer stmt.Close()
-
-	for _, dsurl := range dsurls {
-		if _, err := stmt.ExecContext(ctx, dsurl.ShortURL); err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-	return tx.Commit()
 }

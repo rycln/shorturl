@@ -12,11 +12,17 @@ type Storage interface {
 	Close()
 }
 
-func Factory(cfg *StorageConfig) Storage {
+func StorageFactory(cfg *StorageConfig) (Storage, error) {
 	switch cfg.strgType {
+	case "db":
+		db, err := NewDB(cfg.databaseDsn)
+		if err != nil {
+			return nil, err
+		}
+		return NewDatabaseStorage(db), nil
 	case "file":
-		return NewFileStorage(cfg.filePath)
+		return NewFileStorage(cfg.filePath), nil
 	default:
-		return NewAppMemStorage()
+		return NewAppMemStorage(), nil
 	}
 }
