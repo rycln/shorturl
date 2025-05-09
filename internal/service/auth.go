@@ -12,19 +12,19 @@ import (
 
 var ErrNoUserID = errors.New("jwt does not contain user id")
 
-type AuthService struct {
+type Auth struct {
 	jwtKey string
 	jwtExp time.Duration
 }
 
-func NewAuthService(jwtkey string, jwtExp time.Duration) *AuthService {
-	return &AuthService{
+func NewAuth(jwtkey string, jwtExp time.Duration) *Auth {
+	return &Auth{
 		jwtKey: jwtkey,
 		jwtExp: jwtExp,
 	}
 }
 
-func (s *AuthService) MakeUserID() string {
+func (s *Auth) MakeUserID() string {
 	return uuid.NewString()
 }
 
@@ -40,7 +40,7 @@ func (c jwtClaims) Validate() error {
 	return nil
 }
 
-func (s *AuthService) NewJWTString(userID models.UserID) (string, error) {
+func (s *Auth) NewJWTString(userID models.UserID) (string, error) {
 	claims := jwtClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.jwtExp)),
@@ -55,7 +55,7 @@ func (s *AuthService) NewJWTString(userID models.UserID) (string, error) {
 	return tokenString, nil
 }
 
-func (s *AuthService) ParseIDFromAuthHeader(header string) (models.UserID, error) {
+func (s *Auth) ParseIDFromAuthHeader(header string) (models.UserID, error) {
 	tokenString := strings.TrimPrefix(header, "Bearer")
 	tokenString = strings.TrimSpace(tokenString)
 

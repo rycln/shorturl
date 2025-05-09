@@ -11,7 +11,7 @@ type HashGen struct {
 	len int
 }
 
-func NewHash(len int) *HashGen {
+func NewHashGen(len int) *HashGen {
 	return &HashGen{
 		len: len,
 	}

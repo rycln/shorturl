@@ -9,7 +9,7 @@ import (
 const testHashLen = 10
 
 func TestHashGen_GenerateHashFromURL(t *testing.T) {
-	s := NewHash(testHashLen)
+	s := NewHashGen(testHashLen)
 
 	t.Run("valid test", func(t *testing.T) {
 		hash := s.GenerateHashFromURL(testOrigURL)
