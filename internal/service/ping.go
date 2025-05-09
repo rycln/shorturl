@@ -2,6 +2,8 @@ package service
 
 import "context"
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type PingStorage interface {
 	Ping(context.Context) error
 }
