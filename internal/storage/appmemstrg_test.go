@@ -4,317 +4,179 @@ import (
 	"context"
 	"testing"
 
+	"github.com/rycln/shorturl/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimpleStorageAddURL(t *testing.T) {
-	type want struct {
-		mustContain map[string]string
-		wantErr     bool
-	}
+func TestAppMemStorage_AddURLPair(t *testing.T) {
+	strg := NewAppMemStorage()
 
-	tests := []struct {
-		name      string
-		shortURLs []string
-		origURLs  []string
-		want      want
-	}{
-		{
-			name: "Simple test #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-				},
-				wantErr: false,
-			},
-		},
-		{
-			name: "Simple test #2",
-			shortURLs: []string{
-				"1234ABC",
-			},
-			origURLs: []string{
-				"https://ya.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"1234ABC": "https://ya.ru/",
-				},
-				wantErr: false,
-			},
-		},
-		{
-			name: "Several pairs of data #1",
-			shortURLs: []string{
-				"abcdefg",
-				"1234ABC",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-				"https://ya.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-					"1234ABC": "https://ya.ru/",
-				},
-				wantErr: false,
-			},
-		},
-		{
-			name: "Same data #1",
-			shortURLs: []string{
-				"abcdefg",
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				wantErr: true,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
-			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
-				var err error
-				for i := range test.shortURLs {
-					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
-					err = strg.AddURL(context.Background(), surl)
-				}
-				if test.want.wantErr {
-					assert.Error(t, err)
-				}
-				for k, v := range test.want.mustContain {
-					origURL := strg.storage[k]
-					if !test.want.wantErr {
-						assert.Equal(t, v, origURL)
-					}
-				}
-			}
-		})
-	}
+	umap := make(map[models.ShortURL]models.OrigURL)
+	umap[testShortURL] = testOrigURL
+	strg.pairs[testUserID] = umap
+
+	t.Run("valid test", func(t *testing.T) {
+		pair := models.URLPair{
+			UID:   "123",
+			Short: "234",
+			Orig:  "https://ya.ru/123",
+		}
+		err := strg.AddURLPair(context.Background(), &pair)
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid test #2", func(t *testing.T) {
+		pair := models.URLPair{
+			UID:   testUserID,
+			Short: "345",
+			Orig:  "https://ya.ru/123",
+		}
+		err := strg.AddURLPair(context.Background(), &pair)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		pair := models.URLPair{
+			UID:   "123",
+			Short: "234",
+			Orig:  "https://ya.ru/123",
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err := strg.AddURLPair(ctx, &pair)
+		assert.Error(t, err)
+	})
+
+	t.Run("conflict", func(t *testing.T) {
+		pair := models.URLPair{
+			UID:   testUserID,
+			Short: testShortURL,
+			Orig:  testOrigURL,
+		}
+		err := strg.AddURLPair(context.Background(), &pair)
+		assert.ErrorIs(t, err, ErrConflict)
+	})
 }
 
-func TestSimpleStorageAddBatchURL(t *testing.T) {
-	type want struct {
-		mustContain map[string]string
-		wantErr     bool
-	}
+func TestAppMemStorage_GetURLPairByShort(t *testing.T) {
+	strg := NewAppMemStorage()
 
-	tests := []struct {
-		name      string
-		shortURLs []string
-		origURLs  []string
-		want      want
-	}{
-		{
-			name: "Several pairs of data #1",
-			shortURLs: []string{
-				"abcdefg",
-				"1234ABC",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-				"https://ya.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-					"1234ABC": "https://ya.ru/",
-				},
-				wantErr: false,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
-			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
-				var surls = make([]ShortenedURL, len(test.shortURLs))
-				var err error
-				for i := range test.shortURLs {
-					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
-					surls[i] = surl
-				}
-				err = strg.AddBatchURL(context.Background(), surls)
-				if test.want.wantErr {
-					assert.Error(t, err)
-				}
-				for k, v := range test.want.mustContain {
-					origURL := strg.storage[k]
-					if !test.want.wantErr {
-						assert.Equal(t, v, origURL)
-					}
-				}
-			}
-		})
-	}
+	umap := make(map[models.ShortURL]models.OrigURL)
+	umap[testShortURL] = testOrigURL
+	strg.pairs[testUserID] = umap
+	strg.deleted[testDeletedShort] = struct{}{}
+
+	t.Run("valid test", func(t *testing.T) {
+		pair, err := strg.GetURLPairByShort(context.Background(), testShortURL)
+		assert.NoError(t, err)
+		assert.Equal(t, testPair, *pair)
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := strg.GetURLPairByShort(ctx, testShortURL)
+		assert.Error(t, err)
+	})
+
+	t.Run("deleted url error", func(t *testing.T) {
+		_, err := strg.GetURLPairByShort(context.Background(), testDeletedShort)
+		assert.ErrorIs(t, err, ErrDeletedURL)
+	})
+
+	t.Run("not exist error", func(t *testing.T) {
+		_, err := strg.GetURLPairByShort(context.Background(), models.ShortURL("not exist"))
+		assert.ErrorIs(t, err, ErrNotExist)
+	})
 }
 
-func TestSimpleStorageGetOrigURL(t *testing.T) {
-	type want struct {
-		mustContain map[string]string
-		wantErr     bool
-	}
+func TestAppMemStorage_AddBatchURLPairs(t *testing.T) {
+	strg := NewAppMemStorage()
 
-	tests := []struct {
-		name      string
-		shortURLs []string
-		origURLs  []string
-		want      want
-	}{
+	pairs := []models.URLPair{
 		{
-			name: "Simple test #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-				},
-				wantErr: false,
-			},
+			UID:   testUserID,
+			Short: testShortURL,
+			Orig:  testOrigURL,
 		},
 		{
-			name: "Simple test #2",
-			shortURLs: []string{
-				"1234ABC",
-			},
-			origURLs: []string{
-				"https://ya.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"1234ABC": "https://ya.ru/",
-				},
-				wantErr: false,
-			},
-		},
-		{
-			name: "Wrong GetURL request #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				wantErr: true,
-			},
+			UID:   testUserID,
+			Short: "132",
+			Orig:  "https://ya.ru/123",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
+	t.Run("valid test", func(t *testing.T) {
+		err := strg.AddBatchURLPairs(context.Background(), pairs)
+		assert.NoError(t, err)
+	})
 
-			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
-				for i := range test.shortURLs {
-					strg.storage[test.shortURLs[i]] = test.origURLs[i]
-				}
-				for k, v := range test.want.mustContain {
-					origURL, err := strg.GetOrigURL(context.Background(), k)
-					if err != nil {
-						if test.want.wantErr {
-							assert.Error(t, err)
-						}
-					}
-					if !test.want.wantErr {
-						assert.Equal(t, v, origURL)
-					}
-				}
-			}
-		})
-	}
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err := strg.AddBatchURLPairs(ctx, pairs)
+		assert.Error(t, err)
+	})
 }
 
-func TestSimpleStorageShortOrigURL(t *testing.T) {
-	type want struct {
-		mustContain map[string]string
-		wantErr     bool
+func TestAppMemStorage_GetURLPairBatchByUserID(t *testing.T) {
+	strg := NewAppMemStorage()
+
+	t.Run("valid test", func(t *testing.T) {
+		umap := make(map[models.ShortURL]models.OrigURL)
+		umap[testShortURL] = testOrigURL
+		strg.pairs[testUserID] = umap
+
+		pairs, err := strg.GetURLPairBatchByUserID(context.Background(), testUserID)
+		assert.NoError(t, err)
+		assert.Equal(t, testPair, pairs[0])
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := strg.GetURLPairBatchByUserID(ctx, testUserID)
+		assert.Error(t, err)
+	})
+
+	t.Run("not exist error", func(t *testing.T) {
+		_, err := strg.GetURLPairBatchByUserID(context.Background(), "user id")
+		assert.ErrorIs(t, err, ErrNotExist)
+	})
+}
+
+func TestAppMemStorage_DeleteRequestedURLs(t *testing.T) {
+	strg := NewAppMemStorage()
+
+	delurls := []models.DelURLReq{
+		{
+			UID:   testUserID,
+			Short: testShortURL,
+		},
 	}
 
-	tests := []struct {
-		name      string
-		shortURLs []string
-		origURLs  []string
-		want      want
-	}{
-		{
-			name: "Simple test #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-				},
-				wantErr: false,
-			},
-		},
-		{
-			name: "Simple test #2",
-			shortURLs: []string{
-				"1234ABC",
-			},
-			origURLs: []string{
-				"https://ya.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"1234ABC": "https://ya.ru/",
-				},
-				wantErr: false,
-			},
-		},
-		{
-			name: "Wrong GetURL request #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				wantErr: true,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			strg := NewSimpleStorage()
+	t.Run("valid test", func(t *testing.T) {
+		err := strg.DeleteRequestedURLs(context.Background(), delurls)
+		assert.NoError(t, err)
+	})
 
-			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
-				for i := range test.shortURLs {
-					strg.storage[test.shortURLs[i]] = test.origURLs[i]
-				}
-				for k, v := range test.want.mustContain {
-					shortURL, err := strg.GetShortURL(context.Background(), v)
-					if err != nil {
-						if test.want.wantErr {
-							assert.Error(t, err)
-						}
-					}
-					if !test.want.wantErr {
-						assert.Equal(t, k, shortURL)
-					}
-				}
-			}
-		})
-	}
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err := strg.DeleteRequestedURLs(ctx, delurls)
+		assert.Error(t, err)
+	})
+}
+
+func TestAppMemStorage_Ping(t *testing.T) {
+	strg := NewAppMemStorage()
+
+	t.Run("valid test", func(t *testing.T) {
+		err := strg.Ping(context.Background())
+		assert.NoError(t, err)
+	})
 }
