@@ -29,7 +29,7 @@ type jwtClaims struct {
 }
 
 func (c jwtClaims) Validate() error {
-	if c.UserID == 0 {
+	if c.UserID == "" {
 		return ErrNoUserID
 	}
 	return nil
@@ -59,7 +59,7 @@ func (s *JWTService) ParseIDFromAuthHeader(header string) (models.UserID, error)
 		return []byte(s.key), nil
 	})
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return claims.UserID, nil
 }
