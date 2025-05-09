@@ -25,6 +25,6 @@ var (
 
 	testDelReq = models.DelURLReq{
 		UID:   testUserID,
-		Short: testShortURL,
+		Short: testDeletedShort,
 	}
 )

@@ -90,7 +90,7 @@ func TestFileStorage_GetURLPairByShort(t *testing.T) {
 		err = enc.Encode(&testDelReq)
 		require.NoError(t, err)
 
-		_, err = strg.GetURLPairByShort(context.Background(), testShortURL)
+		_, err = strg.GetURLPairByShort(context.Background(), testDeletedShort)
 		assert.ErrorIs(t, err, ErrDeletedURL)
 	})
 }

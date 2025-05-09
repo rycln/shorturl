@@ -6,6 +6,8 @@ import (
 	"github.com/rycln/shorturl/internal/models"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type urlSaver interface {
 	AddURLPair(context.Context, *models.URLPair) error
 }
