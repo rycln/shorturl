@@ -8,7 +8,7 @@ type Storage interface {
 	service.ShortenerStorage
 	service.BatchShortenerStorage
 	service.PingStorage
-	service.BatchDeleteStorage
+	service.BatchDeleterStorage
 	Close()
 }
 

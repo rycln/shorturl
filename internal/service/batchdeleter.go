@@ -6,25 +6,27 @@ import (
 	"github.com/rycln/shorturl/internal/models"
 )
 
-type BatchDeleteStorage interface {
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
+type BatchDeleterStorage interface {
 	DeleteRequestedURLs(context.Context, []models.DelURLReq) error
 }
 
-type BatchDelete struct {
-	strg     BatchDeleteStorage
+type BatchDeleter struct {
+	strg     BatchDeleterStorage
 	delChans chan chan *models.DelURLReq
 	cancelCh chan struct{}
 }
 
-func NewBatchDelete(strg BatchDeleteStorage, delChans chan chan *models.DelURLReq, cancelCh chan struct{}) *BatchDelete {
-	return &BatchDelete{
+func NewBatchDeleter(strg BatchDeleterStorage, delChans chan chan *models.DelURLReq, cancelCh chan struct{}) *BatchDeleter {
+	return &BatchDeleter{
 		strg:     strg,
 		delChans: delChans,
 		cancelCh: cancelCh,
 	}
 }
 
-func (s *BatchDelete) UserURLsAsyncDeletion(uid models.UserID, shorts []models.ShortURL) {
+func (s *BatchDeleter) UserURLsAsyncDeletion(uid models.UserID, shorts []models.ShortURL) {
 	delCh := make(chan *models.DelURLReq)
 
 	go func() {
@@ -45,7 +47,7 @@ func (s *BatchDelete) UserURLsAsyncDeletion(uid models.UserID, shorts []models.S
 	s.delChans <- delCh
 }
 
-func (s *BatchDelete) DeleteURLsBatch(ctx context.Context, urls []models.DelURLReq) error {
+func (s *BatchDeleter) DeleteURLsBatch(ctx context.Context, urls []models.DelURLReq) error {
 	err := s.strg.DeleteRequestedURLs(ctx, urls)
 	if err != nil {
 		return err
