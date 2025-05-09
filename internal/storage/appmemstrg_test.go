@@ -107,6 +107,7 @@ func TestAppMemStorage_AddBatchURLPairs(t *testing.T) {
 			Orig:  "https://ya.ru/123",
 		},
 	}
+
 	t.Run("valid test", func(t *testing.T) {
 		err := strg.AddBatchURLPairs(context.Background(), pairs)
 		assert.NoError(t, err)

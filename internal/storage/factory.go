@@ -21,7 +21,7 @@ func StorageFactory(cfg *StorageConfig) (Storage, error) {
 		}
 		return NewDatabaseStorage(db), nil
 	case "file":
-		return NewFileStorage(cfg.filePath), nil
+		return NewFileStorage(cfg.filePath)
 	default:
 		return NewAppMemStorage(), nil
 	}

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
 
 	"github.com/rycln/shorturl/internal/models"
@@ -15,14 +16,23 @@ type FileStorage struct {
 	delFileName  string
 }
 
-func NewFileStorage(fileName string) *FileStorage {
+func NewFileStorage(fileName string) (*FileStorage, error) {
+	_, err := os.Create(fileName)
+	if err != nil {
+		return nil, err
+	}
 
 	delFileName := fileName + "_deleted"
+
+	_, err = os.Create(delFileName)
+	if err != nil {
+		return nil, err
+	}
 
 	return &FileStorage{
 		strgFileName: fileName,
 		delFileName:  delFileName,
-	}
+	}, nil
 }
 
 func (s *FileStorage) AddURLPair(ctx context.Context, pair *models.URLPair) error {
@@ -42,6 +52,9 @@ func (s *FileStorage) AddURLPair(ctx context.Context, pair *models.URLPair) erro
 
 func (s *FileStorage) GetURLPairByShort(ctx context.Context, short models.ShortURL) (*models.URLPair, error) {
 	deleted, err := s.shortIsDeleted(ctx, short)
+	if err != nil {
+		return nil, err
+	}
 	if deleted {
 		return nil, newErrDeletedURL(ErrDeletedURL)
 	}
@@ -55,6 +68,12 @@ func (s *FileStorage) GetURLPairByShort(ctx context.Context, short models.ShortU
 
 func (s *FileStorage) AddBatchURLPairs(ctx context.Context, pairs []models.URLPair) error {
 	for _, pair := range pairs {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		err := s.writeIntoStrgFile(&pair)
 		if err != nil {
 			return err
@@ -69,6 +88,12 @@ func (s *FileStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.Us
 
 func (s *FileStorage) DeleteRequestedURLs(ctx context.Context, delurls []models.DelURLReq) error {
 	for _, delurl := range delurls {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		err := s.writeIntoDelFile(&delurl)
 		if err != nil {
 			return err
