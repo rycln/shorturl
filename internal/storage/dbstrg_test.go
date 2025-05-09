@@ -2,431 +2,280 @@ package storage
 
 import (
 	"context"
+	"regexp"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/rycln/shorturl/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestDatabaseStorageAddURL(t *testing.T) {
-	type want struct {
-		wantErr bool
-	}
+func TestDatabaseStorage_AddURLPair(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
 
-	tests := []struct {
-		name     string
-		shortURL string
-		origURL  string
-		want     want
-	}{
-		{
-			name:     "Simple test #1",
-			shortURL: "abcdefg",
-			origURL:  "https://practicum.yandex.ru/",
-			want: want{
-				wantErr: false,
-			},
-		},
-		{
-			name:     "Simple test #2",
-			shortURL: "1234ABC",
-			origURL:  "https://ya.ru/",
-			want: want{
-				wantErr: false,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			if err != nil {
-				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-			}
-			defer db.Close()
+	strg := NewDatabaseStorage(db)
 
-			dbs := &DatabaseStorage{
-				db: db,
-			}
+	expectedQuery := regexp.QuoteMeta(sqlAddURLPair)
 
-			mock.ExpectBegin()
-			mock.ExpectExec("INSERT INTO urls").WithArgs(testID, test.shortURL, test.origURL).WillReturnResult(sqlmock.NewResult(1, 1))
-			mock.ExpectCommit()
+	t.Run("valid test", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
 
-			surl := NewShortenedURL(testID, test.shortURL, test.origURL)
-			err = dbs.AddURL(context.Background(), surl)
-			if test.want.wantErr {
-				assert.Error(t, err)
-			}
-			err = mock.ExpectationsWereMet()
-			if test.want.wantErr {
-				assert.Error(t, err)
-			}
-		})
-	}
-}
-
-func TestDatabaseStorageAddBatchURL(t *testing.T) {
-	type want struct {
-		mustContain map[string]string
-		wantErr     bool
-	}
-
-	tests := []struct {
-		name      string
-		shortURLs []string
-		origURLs  []string
-		want      want
-	}{
-		{
-			name: "Several pairs of data #1",
-			shortURLs: []string{
-				"abcdefg",
-				"1234ABC",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-				"https://ya.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-					"1234ABC": "https://ya.ru/",
-				},
-				wantErr: false,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			if err != nil {
-				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-			}
-			defer db.Close()
-
-			dbs := &DatabaseStorage{
-				db: db,
-			}
-
-			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
-				mock.ExpectBegin()
-				for i := range test.shortURLs {
-					mock.ExpectExec("INSERT INTO urls").WithArgs(testID, test.shortURLs[i], test.origURLs[i]).WillReturnResult(sqlmock.NewResult(1, 1))
-				}
-				mock.ExpectCommit()
-
-				var surls = make([]ShortenedURL, len(test.shortURLs))
-				for i := range test.shortURLs {
-					surl := NewShortenedURL(testID, test.shortURLs[i], test.origURLs[i])
-					surls[i] = surl
-				}
-
-				err = dbs.AddBatchURL(context.Background(), surls)
-				if test.want.wantErr {
-					assert.Error(t, err)
-				}
-				err = mock.ExpectationsWereMet()
-				if test.want.wantErr {
-					assert.Error(t, err)
-				}
-			}
-		})
-	}
-}
-
-func TestDatabaseStorageGetOrigURL(t *testing.T) {
-	type want struct {
-		wantErr bool
-	}
-
-	tests := []struct {
-		name      string
-		shortURL  string
-		origURL   string
-		isDeleted bool
-		want      want
-	}{
-		{
-			name:      "Simple test #1",
-			shortURL:  "abcdefg",
-			origURL:   "https://practicum.yandex.ru/",
-			isDeleted: false,
-			want: want{
-				wantErr: false,
-			},
-		},
-		{
-			name:      "URL was deleted #1",
-			shortURL:  "1234ABC",
-			origURL:   "https://ya.ru/",
-			isDeleted: true,
-			want: want{
-				wantErr: true,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			if err != nil {
-				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-			}
-			defer db.Close()
-
-			dbs := &DatabaseStorage{
-				db: db,
-			}
-
-			rows := mock.NewRows([]string{"original_url", "is_deleted"}).AddRow(test.origURL, test.isDeleted)
-			mock.ExpectQuery("SELECT").WillReturnRows(rows)
-
-			orig, err := dbs.GetOrigURL(context.Background(), test.shortURL)
-
-			if !test.want.wantErr {
-				assert.Equal(t, test.origURL, orig)
-				assert.NoError(t, err)
-			} else {
-				assert.ErrorIs(t, err, ErrDeletedURL)
-			}
-		})
-	}
-}
-
-func TestDatabaseStorageGetShortURL(t *testing.T) {
-	tests := []struct {
-		name      string
-		shortURL  string
-		origURL   string
-		isDeleted bool
-	}{
-		{
-			name:     "Simple test #1",
-			shortURL: "abcdefg",
-			origURL:  "https://practicum.yandex.ru/",
-		},
-		{
-			name:     "Simple test #1",
-			shortURL: "1234ABC",
-			origURL:  "https://ya.ru/",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			if err != nil {
-				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-			}
-			defer db.Close()
-
-			dbs := &DatabaseStorage{
-				db: db,
-			}
-
-			rows := mock.NewRows([]string{"short_url"}).AddRow(test.shortURL)
-			mock.ExpectQuery("SELECT").WillReturnRows(rows)
-
-			short, err := dbs.GetShortURL(context.Background(), test.origURL)
-
-			assert.Equal(t, test.shortURL, short)
-			assert.NoError(t, err)
-		})
-	}
-}
-
-func TestDatabaseStoragePing(t *testing.T) {
-	t.Run("Ping test without error", func(t *testing.T) {
-		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
-		if err != nil {
-			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-		}
-		defer db.Close()
-
-		dbs := &DatabaseStorage{
-			db: db,
-		}
-		mock.ExpectPing().WillReturnError(nil)
-
-		err = dbs.Ping(context.Background())
+		err := strg.AddURLPair(context.Background(), &testPair)
 		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("Ping test with error", func(t *testing.T) {
-		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
-		if err != nil {
-			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-		}
-		defer db.Close()
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
 
-		dbs := &DatabaseStorage{
-			db: db,
-		}
-		mock.ExpectPing().WillReturnError(errTest)
+		mock.ExpectBegin()
 
-		err = dbs.Ping(context.Background())
+		err := strg.AddURLPair(ctx, &testPair)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("conflict error", func(t *testing.T) {
+		var pgErr = &pgconn.PgError{
+			Code: pgerrcode.IntegrityConstraintViolation,
+		}
+
+		mock.ExpectBegin()
+		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnError(pgErr)
+
+		err := strg.AddURLPair(context.Background(), &testPair)
+		assert.ErrorIs(t, err, ErrConflict)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("tx begin error", func(t *testing.T) {
+		mock.ExpectBegin().WillReturnError(errTest)
+
+		err := strg.AddURLPair(context.Background(), &testPair)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestDatabaseStorage_GetURLPairByShort(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	strg := NewDatabaseStorage(db)
+
+	expectedQuery := regexp.QuoteMeta(sqlGetURLPairByShort)
+
+	t.Run("valid test", func(t *testing.T) {
+		rows := mock.NewRows([]string{"user_id", "original_url", "is_deleted"}).AddRow(testPair.UID, testPair.Orig, false)
+		mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+
+		pair, err := strg.GetURLPairByShort(context.Background(), testPair.Short)
+		assert.NoError(t, err)
+		assert.Equal(t, testPair, *pair)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := strg.GetURLPairByShort(ctx, testPair.Short)
 		assert.Error(t, err)
 	})
+
+	t.Run("valid test", func(t *testing.T) {
+		rows := mock.NewRows([]string{"user_id", "original_url", "is_deleted"}).AddRow(testPair.UID, testPair.Orig, true)
+		mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+
+		_, err := strg.GetURLPairByShort(context.Background(), testPair.Short)
+		assert.ErrorIs(t, err, ErrDeletedURL)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
-func TestDatabaseStorageGetAllUserURLs(t *testing.T) {
-	type want struct {
-		mustContain map[string]string
-		uid         string
-		wantErr     bool
+func TestDatabaseStorage_AddBatchURLPairs(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	strg := NewDatabaseStorage(db)
+
+	expectedQuery := regexp.QuoteMeta(sqlAddURLPair)
+
+	pairs := []models.URLPair{
+		testPair,
 	}
 
-	tests := []struct {
-		name      string
-		dataUID   string
-		shortURLs []string
-		origURLs  []string
-		want      want
-	}{
-		{
-			name:    "Simple test #1",
-			dataUID: testID,
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"abcdefg": "https://practicum.yandex.ru/",
-				},
-				uid:     testID,
-				wantErr: false,
-			},
-		},
-		{
-			name:    "Simple test #2",
-			dataUID: testID,
-			shortURLs: []string{
-				"1234ABC",
-				"235DCE",
-			},
-			origURLs: []string{
-				"https://ya.ru/",
-				"https://yandex.ru/",
-			},
-			want: want{
-				mustContain: map[string]string{
-					"1234ABC": "https://ya.ru/",
-					"235DCE":  "https://yandex.ru/",
-				},
-				uid:     testID,
-				wantErr: false,
-			},
-		},
-		{
-			name:    "Wrong GetURL request #1",
-			dataUID: "testID",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			origURLs: []string{
-				"https://practicum.yandex.ru/",
-			},
-			want: want{
-				uid:     "2",
-				wantErr: true,
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			if err != nil {
-				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-			}
-			defer db.Close()
+	t.Run("valid test", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
 
-			dbs := &DatabaseStorage{
-				db: db,
-			}
+		err := strg.AddBatchURLPairs(context.Background(), pairs)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 
-			if assert.Equal(t, len(test.shortURLs), len(test.origURLs), "wrong tests") {
-				rows := mock.NewRows([]string{"user_id", "short_url", "original_url"})
-				for i := range test.shortURLs {
-					rows.AddRow(test.dataUID, test.shortURLs[i], test.origURLs[i])
-				}
-				mock.ExpectQuery("SELECT").WillReturnRows(rows)
+	t.Run("some error", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnError(errTest)
 
-				surls, err := dbs.GetAllUserURLs(context.Background(), test.want.uid)
-				if err != nil {
-					if test.want.wantErr {
-						assert.Error(t, err)
-					}
-				}
-				if !test.want.wantErr {
-					for _, surl := range surls {
-						assert.Equal(t, test.want.mustContain[surl.ShortURL], surl.OrigURL)
-					}
-				}
-			}
-		})
-	}
+		err := strg.AddBatchURLPairs(context.Background(), pairs)
+		assert.ErrorIs(t, err, errTest)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		mock.ExpectBegin()
+
+		err := strg.AddBatchURLPairs(ctx, pairs)
+		assert.Error(t, err)
+	})
+
+	t.Run("tx begin error", func(t *testing.T) {
+		mock.ExpectBegin().WillReturnError(errTest)
+
+		err := strg.AddBatchURLPairs(context.Background(), pairs)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
-func TestDatabaseStorageDeleteUserURLs(t *testing.T) {
-	type want struct {
-		wantErr bool
+func TestDatabaseStorage_GetURLPairBatchByUserID(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	strg := NewDatabaseStorage(db)
+
+	expectedQuery := regexp.QuoteMeta(sqlGetURLPairBatchByUserID)
+
+	testPairs := []models.URLPair{
+		testPair,
 	}
 
-	tests := []struct {
-		name      string
-		shortURLs []string
-		want      want
-	}{
-		{
-			name: "Simple test #1",
-			shortURLs: []string{
-				"abcdefg",
-			},
-			want: want{
-				wantErr: false,
-			},
-		},
-		{
-			name: "Simple test #2",
-			shortURLs: []string{
-				"1234ABC",
-			},
-			want: want{
-				wantErr: false,
-			},
-		},
+	t.Run("valid test", func(t *testing.T) {
+		rows := mock.NewRows([]string{"user_id", "short_url", "original_url"}).AddRow(testPair.UID, testPair.Short, testPair.Orig)
+		mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+
+		pairs, err := strg.GetURLPairBatchByUserID(context.Background(), testUserID)
+		assert.NoError(t, err)
+		assert.Equal(t, testPairs, pairs)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := strg.GetURLPairBatchByUserID(ctx, testUserID)
+		assert.Error(t, err)
+	})
+
+	t.Run("some error", func(t *testing.T) {
+		mock.ExpectQuery(expectedQuery).WillReturnError(errTest)
+
+		_, err := strg.GetURLPairBatchByUserID(context.Background(), testUserID)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("valid test", func(t *testing.T) {
+		mock.ExpectQuery(expectedQuery).WillReturnRows(sqlmock.NewRows([]string{"user_id", "short_url", "original_url"}))
+
+		_, err := strg.GetURLPairBatchByUserID(context.Background(), testUserID)
+		assert.ErrorIs(t, err, ErrNotExist)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestDatabaseStorage_DeleteRequestedURLs(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	strg := NewDatabaseStorage(db)
+
+	expectedQuery := regexp.QuoteMeta(sqlDeleteRequestedURLs)
+
+	delurls := []models.DelURLReq{
+		testDelReq,
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			if err != nil {
-				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-			}
-			defer db.Close()
 
-			dbs := &DatabaseStorage{
-				db: db,
-			}
+	t.Run("valid test", func(t *testing.T) {
+		mock.ExpectBegin()
+		for _, delurl := range delurls {
+			mock.ExpectPrepare(expectedQuery).ExpectExec().WithArgs(delurl.Short).WillReturnResult(sqlmock.NewResult(1, 1))
+		}
+		mock.ExpectCommit()
 
-			mock.ExpectBegin()
-			for i := range test.shortURLs {
-				mock.ExpectExec("UPDATE urls").WithArgs(test.shortURLs[i]).WillReturnResult(sqlmock.NewResult(1, 1))
-			}
-			mock.ExpectCommit()
+		err := strg.DeleteRequestedURLs(context.Background(), delurls)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 
-			var dsurls = make([]DelShortURLs, len(test.shortURLs))
-			for i := range test.shortURLs {
-				dsurls[i] = NewDelShortURLs(testID, test.shortURLs[i])
-			}
-			err = dbs.DeleteUserURLs(context.Background(), dsurls)
-			if test.want.wantErr {
-				assert.Error(t, err)
-			}
-			err = mock.ExpectationsWereMet()
-			if test.want.wantErr {
-				assert.Error(t, err)
-			}
-		})
-	}
+	t.Run("tx begin error", func(t *testing.T) {
+		mock.ExpectBegin().WillReturnError(errTest)
+
+		err := strg.DeleteRequestedURLs(context.Background(), delurls)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("prepare error", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectPrepare(expectedQuery).WillReturnError(errTest)
+
+		err := strg.DeleteRequestedURLs(context.Background(), delurls)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("exec error", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectPrepare(expectedQuery).ExpectExec().WillReturnError(errTest)
+
+		err := strg.DeleteRequestedURLs(context.Background(), delurls)
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestDatabaseStorage_Ping(t *testing.T) {
+	db, mock, err := sqlmock.New(
+		sqlmock.MonitorPingsOption(true),
+	)
+	require.NoError(t, err)
+	defer db.Close()
+
+	strg := NewDatabaseStorage(db)
+
+	t.Run("valid test", func(t *testing.T) {
+		mock.ExpectPing().WillReturnError(nil)
+
+		err := strg.Ping(context.Background())
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("some error", func(t *testing.T) {
+		mock.ExpectPing().WillReturnError(errTest)
+
+		err := strg.Ping(context.Background())
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }

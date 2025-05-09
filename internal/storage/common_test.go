@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"errors"
+
 	"github.com/rycln/shorturl/internal/models"
 )
 
@@ -13,11 +15,14 @@ const (
 )
 
 var (
+	errTest = errors.New("test error")
+
 	testPair = models.URLPair{
 		UID:   testUserID,
 		Short: testShortURL,
 		Orig:  testOrigURL,
 	}
+
 	testDelReq = models.DelURLReq{
 		UID:   testUserID,
 		Short: testShortURL,

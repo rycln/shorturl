@@ -46,7 +46,7 @@ func (s *DatabaseStorage) GetURLPairByShort(ctx context.Context, short models.Sh
 	}
 	var isDeleted bool
 
-	err := row.Scan(&pair.Orig, &pair.Orig, &isDeleted)
+	err := row.Scan(&pair.UID, &pair.Orig, &isDeleted)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.U
 	if err != nil {
 		return err
 	}
-	tx.Rollback()
+	defer tx.Rollback()
 
 	for _, pair := range pairs {
 		_, err := tx.ExecContext(ctx, sqlAddURLPair, pair.UID, pair.Short, pair.Orig)
@@ -87,7 +87,7 @@ func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid model
 	for rows.Next() {
 		var pair models.URLPair
 
-		err = rows.Scan(&pair.UID, &pair.Short, &pair.Orig)
+		err := rows.Scan(&pair.UID, &pair.Short, &pair.Orig)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +100,7 @@ func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid model
 		return nil, err
 	}
 
-	if pairs == nil {
+	if len(pairs) == 0 {
 		return nil, newErrNotExist(ErrNotExist)
 	}
 
