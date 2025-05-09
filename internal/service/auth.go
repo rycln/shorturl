@@ -6,21 +6,26 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/rycln/shorturl/internal/models"
 )
 
-const tokenExp = time.Duration(2) * time.Hour
-
 var ErrNoUserID = errors.New("jwt does not contain user id")
 
-type JWTService struct {
-	key string
+type AuthService struct {
+	jwtKey string
+	jwtExp time.Duration
 }
 
-func NewJWTService(key string) *JWTService {
-	return &JWTService{
-		key: key,
+func NewAuthService(jwtkey string, jwtExp time.Duration) *AuthService {
+	return &AuthService{
+		jwtKey: jwtkey,
+		jwtExp: jwtExp,
 	}
+}
+
+func (s *AuthService) MakeUserID() string {
+	return uuid.NewString()
 }
 
 type jwtClaims struct {
@@ -35,28 +40,28 @@ func (c jwtClaims) Validate() error {
 	return nil
 }
 
-func (s *JWTService) NewJWTString(userID models.UserID) (string, error) {
+func (s *AuthService) NewJWTString(userID models.UserID) (string, error) {
 	claims := jwtClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.jwtExp)),
 		},
 		UserID: userID,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(s.key))
+	tokenString, err := token.SignedString([]byte(s.jwtKey))
 	if err != nil {
 		return "", err
 	}
 	return tokenString, nil
 }
 
-func (s *JWTService) ParseIDFromAuthHeader(header string) (models.UserID, error) {
+func (s *AuthService) ParseIDFromAuthHeader(header string) (models.UserID, error) {
 	tokenString := strings.TrimPrefix(header, "Bearer")
 	tokenString = strings.TrimSpace(tokenString)
 
 	claims := &jwtClaims{}
 	_, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-		return []byte(s.key), nil
+		return []byte(s.jwtKey), nil
 	})
 	if err != nil {
 		return "", err
