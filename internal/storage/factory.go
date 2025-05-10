@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/rycln/shorturl/internal/service"
+	service "github.com/rycln/shorturl/internal/services"
 )
 
 type Storage interface {

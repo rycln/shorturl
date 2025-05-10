@@ -1,11 +1,11 @@
-package service
+package services
 
 import (
 	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/rycln/shorturl/internal/service/mocks"
+	"github.com/rycln/shorturl/internal/services/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
