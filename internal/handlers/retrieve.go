@@ -33,7 +33,7 @@ func (h *RetrieveHandler) HandleHTTP(res http.ResponseWriter, req *http.Request)
 	shortURL := req.Context().Value("short").(string)
 	if shortURL == "" {
 		res.WriteHeader(http.StatusInternalServerError)
-		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL empty value")))
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
 		return
 	}
 
