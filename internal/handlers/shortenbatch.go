@@ -61,7 +61,7 @@ func (h *ShortenBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Requ
 	for i, pair := range pairs {
 		resBody[i] = shortenBatchRes{
 			ID:       reqBody[i].ID,
-			ShortURL: string(pair.Short),
+			ShortURL: h.baseAddr + "/" + string(pair.Short),
 		}
 	}
 

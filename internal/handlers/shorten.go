@@ -63,5 +63,5 @@ func (h *ShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (h *ShortenHandler) sendResponse(res http.ResponseWriter, code int, shortURL string) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(code)
-	res.Write([]byte(h.baseAddr + shortURL))
+	res.Write([]byte(h.baseAddr + "/" + shortURL))
 }

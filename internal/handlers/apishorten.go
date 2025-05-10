@@ -81,7 +81,7 @@ func (h *APIShortenHandler) HandleHTTP(res http.ResponseWriter, req *http.Reques
 
 func (h *APIShortenHandler) sendResponse(res http.ResponseWriter, code int, shortURL string) error {
 	var resBody apiShortenRes
-	resBody.Result = h.baseAddr + shortURL
+	resBody.Result = h.baseAddr + "/" + shortURL
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(code)
