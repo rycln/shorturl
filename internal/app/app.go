@@ -10,6 +10,7 @@ import (
 	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/handlers"
 	"github.com/rycln/shorturl/internal/logger"
+	"github.com/rycln/shorturl/internal/middleware"
 	"github.com/rycln/shorturl/internal/services"
 	"github.com/rycln/shorturl/internal/storage"
 )
@@ -63,6 +64,7 @@ func New() (*App, error) {
 
 	r := chi.NewRouter()
 
+	r.Use(middleware.Logger)
 	r.Post("/api/shorten/batch", shortenBatchHandler.HandleHTTP)
 	r.Post("/api/shorten", apiShortenHandler.HandleHTTP)
 	r.Get("/api/user/urls", retrieveBatchHandler.HandleHTTP)
