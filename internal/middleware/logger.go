@@ -45,8 +45,8 @@ func Logger(h http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		logger.Log.Info("req/res info",
-			zap.String("uri", r.RequestURI),
+		logger.Log.Info("Req/Res Log",
+			zap.String("url", r.RequestURI),
 			zap.String("method", r.Method),
 			zap.Int("status", responseData.status),
 			zap.Duration("duration", duration),

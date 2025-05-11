@@ -65,6 +65,8 @@ func New() (*App, error) {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
+	r.Use(middleware.Compress)
+
 	r.Post("/api/shorten/batch", shortenBatchHandler.HandleHTTP)
 	r.Post("/api/shorten", apiShortenHandler.HandleHTTP)
 	r.Get("/api/user/urls", retrieveBatchHandler.HandleHTTP)
