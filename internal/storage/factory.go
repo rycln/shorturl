@@ -12,7 +12,7 @@ type Storage interface {
 	Close()
 }
 
-func StorageFactory(cfg *StorageConfig) (Storage, error) {
+func Factory(cfg *StorageConfig) (Storage, error) {
 	switch cfg.strgType {
 	case "db":
 		db, err := NewDB(cfg.databaseDsn)
