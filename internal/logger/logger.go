@@ -4,13 +4,19 @@ import (
 	"go.uber.org/zap"
 )
 
-// для логгера приемлимо использовать глобальную переменную?
 var Log *zap.Logger = zap.NewNop()
 
-func LogInit() error {
+func LogInit(level string) error {
+	lvl, err := zap.ParseAtomicLevel(level)
+	if err != nil {
+		return err
+	}
+
 	cfg := zap.NewDevelopmentConfig()
-	cfg.Level.SetLevel(zap.InfoLevel)
-	cfg.DisableCaller = true
+	cfg.Level = lvl
+	if cfg.Level.Level() != zap.DebugLevel {
+		cfg.DisableCaller = true
+	}
 
 	zl, err := cfg.Build()
 	if err != nil {
