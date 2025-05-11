@@ -6,87 +6,142 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/rycln/shorturl/internal/logger"
 )
 
 const (
 	defaultServerAddr = ":8080"
 	defaultBaseAddr   = "http://localhost:8080"
-	defultTimeout     = 2
-	defaultKeyLength  = 10
+	defaultTimeout    = time.Duration(2) * time.Minute
+	defaultKeyLength  = 32
+	defaultLogLevel   = "debug"
 )
 
 type Cfg struct {
-	ServerAddr      string `env:"SERVER_ADDRESS"`
-	ShortBaseAddr   string `env:"BASE_URL"`
-	StorageFilePath string `env:"FILE_STORAGE_PATH"`
-	DatabaseDsn     string `env:"DATABASE_DSN"`
-	Timeout         int    `env:"TIMEOUT_DUR"`
-	Key             string `env:"KEY"`
+	ServerAddr      string        `env:"SERVER_ADDRESS"`
+	ShortBaseAddr   string        `env:"BASE_URL"`
+	StorageFilePath string        `env:"FILE_STORAGE_PATH"`
+	DatabaseDsn     string        `env:"DATABASE_DSN"`
+	Timeout         time.Duration `env:"TIMEOUT_DUR"`
+	Key             string        `env:"JWT_KEY"`
+	LogLevel        string        `env:"LOG_LEVEL"`
+	StorageType     string        `env:"-"`
 }
 
-func NewCfg() *Cfg {
-	cfg := &Cfg{}
+type ConfigBuilder struct {
+	cfg *Cfg
+	err error
+}
 
-	flag.StringVar(&cfg.ServerAddr, "a", defaultServerAddr, "Address and port to start the server (environment variable SERVER_ADDRESS has higher priority)")
-	flag.StringVar(&cfg.ShortBaseAddr, "b", defaultBaseAddr, "Base address and port for short URL (environment variable BASE_URL has higher priority)")
-	flag.StringVar(&cfg.StorageFilePath, "f", "", "URL storage file path (environment variable FILE_STORAGE_PATH has higher priority)")
-	flag.StringVar(&cfg.DatabaseDsn, "d", "", "Database connection address (environment variable DATABASE_DSN has higher priority)")
-	flag.IntVar(&cfg.Timeout, "t", defultTimeout, "Timeout duration in seconds (environment variable TIMEOUT_DUR has higher priority)")
-	flag.StringVar(&cfg.Key, "k", "", "Key for jwt autorization (environment variable KEY has higher priority)")
+func NewConfigBuilder() *ConfigBuilder {
+	return &ConfigBuilder{
+		cfg: &Cfg{
+			ServerAddr:    defaultServerAddr,
+			ShortBaseAddr: defaultBaseAddr,
+			Timeout:       defaultTimeout,
+			LogLevel:      defaultLogLevel,
+		},
+		err: nil,
+	}
+}
+
+func (b *ConfigBuilder) WithFlagParsing() *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	flag.StringVar(&b.cfg.ServerAddr, "a", b.cfg.ServerAddr, "Address and port to start the server")
+	flag.StringVar(&b.cfg.ShortBaseAddr, "b", b.cfg.ShortBaseAddr, "Base address and port for short URL")
+	flag.StringVar(&b.cfg.StorageFilePath, "f", b.cfg.StorageFilePath, "URL storage file path")
+	flag.StringVar(&b.cfg.DatabaseDsn, "d", b.cfg.DatabaseDsn, "Database connection address")
+	flag.DurationVar(&b.cfg.Timeout, "t", b.cfg.Timeout, "Timeout duration in seconds")
+	flag.StringVar(&b.cfg.Key, "k", b.cfg.Key, "Key for jwt autorization")
+	flag.StringVar(&b.cfg.LogLevel, "l", b.cfg.LogLevel, "Logger level")
 	flag.Parse()
 
-	err := env.Parse(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	if cfg.Key == "" {
-		cfg.Key = generateKey(defaultKeyLength)
-	}
-
-	return cfg
+	return b
 }
 
-func generateKey(n int) string {
+func (b *ConfigBuilder) WithEnvParsing() *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	err := env.Parse(b.cfg)
+	if err != nil {
+		b.cfg = nil
+		b.err = err
+		return b
+	}
+
+	return b
+}
+
+func (b *ConfigBuilder) WithDefaultJWTKey() *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	if b.cfg.Key == "" {
+		key, err := generateKey(defaultKeyLength)
+		if err != nil {
+			b.cfg = nil
+			b.err = err
+			return b
+		}
+		b.cfg.Key = key
+		logger.Log.Warn("Default JWT key used!")
+	}
+
+	return b
+}
+
+func generateKey(n int) (string, error) {
 	key := make([]byte, n)
 	_, err := rand.Read(key)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return string(key)
+	return string(key), nil
 }
 
-func (cfg *Cfg) GetServerAddr() string {
-	return cfg.ServerAddr
+func (b *ConfigBuilder) WithFilePath(filepath string) *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	b.cfg.StorageFilePath = filepath
+
+	return b
 }
 
-func (cfg *Cfg) GetBaseAddr() string {
-	return cfg.ShortBaseAddr
+func (b *ConfigBuilder) WithDatabaseDsn(dsn string) *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	b.cfg.DatabaseDsn = dsn
+
+	return b
 }
 
-func (cfg *Cfg) GetFilePath() string {
-	return cfg.StorageFilePath
-}
+func (b *ConfigBuilder) WithStorageType() *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
 
-func (cfg *Cfg) GetDatabaseDsn() string {
-	return cfg.DatabaseDsn
-}
-
-func (cfg *Cfg) StorageIs() string {
 	switch {
-	case cfg.DatabaseDsn != "":
-		return "db"
-	case cfg.StorageFilePath != "":
-		return "file"
+	case b.cfg.DatabaseDsn != "":
+		b.cfg.StorageType = "db"
+	case b.cfg.StorageFilePath != "":
+		b.cfg.StorageType = "file"
 	default:
-		return "app"
+		b.cfg.StorageType = "app"
 	}
+
+	return b
 }
 
-func (cfg *Cfg) GetTimeoutDuration() time.Duration {
-	return time.Duration(cfg.Timeout) * time.Second
-}
-
-func (cfg *Cfg) GetKey() string {
-	return cfg.Key
+func (b *ConfigBuilder) Build() (*Cfg, error) {
+	return b.cfg, b.err
 }
