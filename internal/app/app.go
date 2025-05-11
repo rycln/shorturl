@@ -1,11 +1,13 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rycln/shorturl/internal/config"
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/handlers"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/services"
@@ -65,7 +67,10 @@ func New() (*App, error) {
 	r.Post("/api/shorten", apiShortenHandler.HandleHTTP)
 	r.Get("/api/user/urls", retrieveBatchHandler.HandleHTTP)
 	r.Get("/ping", pingHandler.HandleHTTP)
-	r.Get("/{short}", retrieveHandler.HandleHTTP)
+	r.Get("/{short}", func(res http.ResponseWriter, req *http.Request) {
+		ctx := context.WithValue(req.Context(), contextkeys.ShortURL, chi.URLParam(req, "short"))
+		retrieveHandler.HandleHTTP(res, req.WithContext(ctx))
+	})
 	r.Post("/", shortenHandler.ServeHTTP)
 
 	return &App{

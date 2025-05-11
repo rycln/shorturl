@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
@@ -30,8 +31,8 @@ func NewRetrieveHandler(retrieveService retrieveServicer) *RetrieveHandler {
 }
 
 func (h *RetrieveHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
-	shortURL := req.Context().Value("short").(string)
-	if shortURL == "" {
+	shortURL, ok := req.Context().Value(contextkeys.ShortURL).(string)
+	if !ok {
 		res.WriteHeader(http.StatusInternalServerError)
 		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
 		return
