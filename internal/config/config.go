@@ -125,9 +125,9 @@ func (b *ConfigBuilder) WithDatabaseDsn(dsn string) *ConfigBuilder {
 	return b
 }
 
-func (b *ConfigBuilder) WithStorageType() *ConfigBuilder {
+func (b *ConfigBuilder) Build() (*Cfg, error) {
 	if b.err != nil {
-		return b
+		return nil, b.err
 	}
 
 	switch {
@@ -139,9 +139,5 @@ func (b *ConfigBuilder) WithStorageType() *ConfigBuilder {
 		b.cfg.StorageType = "app"
 	}
 
-	return b
-}
-
-func (b *ConfigBuilder) Build() (*Cfg, error) {
 	return b.cfg, b.err
 }

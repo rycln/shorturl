@@ -27,6 +27,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 		Timeout:         testTimeout,
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
+		StorageType:     "db",
 	}
 
 	t.Setenv("SERVER_ADDRESS", testCfg.ServerAddr)
@@ -70,6 +71,7 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 		Timeout:         testTimeout,
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
+		StorageType:     "db",
 	}
 
 	t.Run("valid test", func(t *testing.T) {
@@ -95,7 +97,6 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 func TestConfigBuilder_WithStorageType(t *testing.T) {
 	t.Run("app mem storage type", func(t *testing.T) {
 		cfg, err := NewConfigBuilder().
-			WithStorageType().
 			Build()
 		assert.NoError(t, err)
 		assert.Equal(t, "app", cfg.StorageType)
@@ -104,7 +105,6 @@ func TestConfigBuilder_WithStorageType(t *testing.T) {
 	t.Run("file storage type", func(t *testing.T) {
 		cfg, err := NewConfigBuilder().
 			WithFilePath(testFilePath).
-			WithStorageType().
 			Build()
 		assert.NoError(t, err)
 		assert.Equal(t, "file", cfg.StorageType)
@@ -114,7 +114,6 @@ func TestConfigBuilder_WithStorageType(t *testing.T) {
 		cfg, err := NewConfigBuilder().
 			WithFilePath(testFilePath).
 			WithDatabaseDsn(testDatabaseDsn).
-			WithStorageType().
 			Build()
 		assert.NoError(t, err)
 		assert.Equal(t, "db", cfg.StorageType)
