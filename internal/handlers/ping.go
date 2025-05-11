@@ -9,7 +9,7 @@ import (
 )
 
 type pingServicer interface {
-	Ping(context.Context) error
+	PingStorage(context.Context) error
 }
 
 type PingHandler struct {
@@ -23,7 +23,7 @@ func NewPingHandler(pingService pingServicer) *PingHandler {
 }
 
 func (h *PingHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
-	err := h.pingService.Ping(req.Context())
+	err := h.pingService.PingStorage(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))
