@@ -75,6 +75,8 @@ func (h *ShortenBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Requ
 	}
 
 	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+
 	err = json.NewEncoder(res).Encode(resBody)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
