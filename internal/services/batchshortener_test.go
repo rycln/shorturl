@@ -25,6 +25,7 @@ func TestBatchShortener_BatchShortenURL(t *testing.T) {
 
 	testPairs := []models.URLPair{
 		{
+			UID:   testUserID,
 			Short: testShortURL,
 			Orig:  testOrigURL,
 		},
@@ -34,7 +35,7 @@ func TestBatchShortener_BatchShortenURL(t *testing.T) {
 		mHash.EXPECT().GenerateHashFromURL(testOrigURL).Return(testShortURL)
 		mStrg.EXPECT().AddBatchURLPairs(context.Background(), testPairs).Return(nil)
 
-		pairs, err := s.BatchShortenURL(context.Background(), testOrigs)
+		pairs, err := s.BatchShortenURL(context.Background(), testUserID, testOrigs)
 		assert.NoError(t, err)
 		assert.Equal(t, testPairs, pairs)
 	})
@@ -43,7 +44,7 @@ func TestBatchShortener_BatchShortenURL(t *testing.T) {
 		mHash.EXPECT().GenerateHashFromURL(testOrigURL).Return(testShortURL)
 		mStrg.EXPECT().AddBatchURLPairs(context.Background(), testPairs).Return(errTest)
 
-		_, err := s.BatchShortenURL(context.Background(), testOrigs)
+		_, err := s.BatchShortenURL(context.Background(), testUserID, testOrigs)
 		assert.Error(t, err)
 	})
 }

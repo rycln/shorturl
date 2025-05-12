@@ -42,9 +42,10 @@ func NewShortener(strg ShortenerStorage, hasher hasher) *Shortener {
 	}
 }
 
-func (s *Shortener) ShortenURL(ctx context.Context, orig models.OrigURL) (*models.URLPair, error) {
+func (s *Shortener) ShortenURL(ctx context.Context, uid models.UserID, orig models.OrigURL) (*models.URLPair, error) {
 	short := s.hasher.GenerateHashFromURL(orig)
 	pair := &models.URLPair{
+		UID:   uid,
 		Short: short,
 		Orig:  orig,
 	}

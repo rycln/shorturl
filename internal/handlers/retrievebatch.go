@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
@@ -37,7 +39,13 @@ type retBatchRes struct {
 }
 
 func (h *RetrieveBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
-	uid := req.Context().Value("uid").(string)
+	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
+	if !ok {
+		res.WriteHeader(http.StatusInternalServerError)
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		return
+	}
+
 	pairs, err := h.retrieveBatchService.GetUserURLs(req.Context(), models.UserID(uid))
 	if e, ok := err.(errRetrieveBatchNotExist); ok && e.IsErrNotExist() {
 		res.WriteHeader(http.StatusNoContent)

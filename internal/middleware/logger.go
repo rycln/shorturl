@@ -30,7 +30,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 }
 
 func Logger(h http.Handler) http.Handler {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
+	log := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		responseData := &responseData{
@@ -54,5 +54,5 @@ func Logger(h http.Handler) http.Handler {
 		)
 	}
 
-	return http.HandlerFunc(logFn)
+	return http.HandlerFunc(log)
 }

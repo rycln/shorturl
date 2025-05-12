@@ -37,11 +37,12 @@ func NewBatchShortener(strg BatchShortenerStorage, hasher batchHasher) *BatchSho
 	}
 }
 
-func (s *BatchShortener) BatchShortenURL(ctx context.Context, origs []models.OrigURL) ([]models.URLPair, error) {
+func (s *BatchShortener) BatchShortenURL(ctx context.Context, uid models.UserID, origs []models.OrigURL) ([]models.URLPair, error) {
 	var pairs = make([]models.URLPair, len(origs))
 	for i, orig := range origs {
 		short := s.hasher.GenerateHashFromURL(orig)
 		pairs[i] = models.URLPair{
+			UID:   uid,
 			Short: short,
 			Orig:  orig,
 		}

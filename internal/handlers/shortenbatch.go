@@ -3,15 +3,17 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
 )
 
 type shortenBatchServicer interface {
-	BatchShortenURL(context.Context, []models.OrigURL) ([]models.URLPair, error)
+	BatchShortenURL(context.Context, models.UserID, []models.OrigURL) ([]models.URLPair, error)
 }
 
 type ShortenBatchHandler struct {
@@ -37,6 +39,13 @@ type shortenBatchRes struct {
 }
 
 func (h *ShortenBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
+	if !ok {
+		res.WriteHeader(http.StatusInternalServerError)
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		return
+	}
+
 	var reqBody []shortenBatchReq
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -50,7 +59,7 @@ func (h *ShortenBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Requ
 		origs[i] = models.OrigURL(sbreq.OrigURL)
 	}
 
-	pairs, err := h.shortenBatchService.BatchShortenURL(req.Context(), origs)
+	pairs, err := h.shortenBatchService.BatchShortenURL(req.Context(), uid, origs)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))

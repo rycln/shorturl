@@ -21,6 +21,7 @@ func TestShortener_ShortenURL(t *testing.T) {
 	s := NewShortener(mStrg, mHash)
 
 	wantPair := models.URLPair{
+		UID:   testUserID,
 		Short: testShortURL,
 		Orig:  testOrigURL,
 	}
@@ -29,7 +30,7 @@ func TestShortener_ShortenURL(t *testing.T) {
 		mHash.EXPECT().GenerateHashFromURL(wantPair.Orig).Return(wantPair.Short)
 		mStrg.EXPECT().AddURLPair(context.Background(), &wantPair).Return(nil)
 
-		pair, err := s.ShortenURL(context.Background(), wantPair.Orig)
+		pair, err := s.ShortenURL(context.Background(), testUserID, wantPair.Orig)
 		assert.NoError(t, err)
 		assert.Equal(t, &wantPair, pair)
 	})
@@ -39,7 +40,7 @@ func TestShortener_ShortenURL(t *testing.T) {
 		mHash.EXPECT().GenerateHashFromURL(wantPair.Orig).Return(wantPair.Short)
 		mStrg.EXPECT().AddURLPair(context.Background(), &wantPair).Return(mErr)
 
-		pair, err := s.ShortenURL(context.Background(), wantPair.Orig)
+		pair, err := s.ShortenURL(context.Background(), testUserID, wantPair.Orig)
 		assert.Error(t, err)
 		assert.Equal(t, &wantPair, pair)
 	})
@@ -48,7 +49,7 @@ func TestShortener_ShortenURL(t *testing.T) {
 		mHash.EXPECT().GenerateHashFromURL(wantPair.Orig).Return(wantPair.Short)
 		mStrg.EXPECT().AddURLPair(context.Background(), &wantPair).Return(errTest)
 
-		_, err := s.ShortenURL(context.Background(), wantPair.Orig)
+		_, err := s.ShortenURL(context.Background(), testUserID, wantPair.Orig)
 		assert.Error(t, err)
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rycln/shorturl/internal/config"
@@ -17,6 +18,7 @@ import (
 
 const (
 	lengthOfShortURL = 7
+	jwtExpires       = time.Duration(2) * time.Hour
 )
 
 type App struct {
@@ -54,6 +56,7 @@ func New() (*App, error) {
 	shortenerService := services.NewShortener(strg, hashService)
 	batchShortenerService := services.NewBatchShortener(strg, hashService)
 	pingService := services.NewPing(strg)
+	authService := services.NewAuth(cfg.Key, jwtExpires)
 
 	shortenHandler := handlers.NewShortenHandler(shortenerService, cfg.ShortBaseAddr)
 	apiShortenHandler := handlers.NewAPIShortenHandler(shortenerService, cfg.ShortBaseAddr)
@@ -62,10 +65,13 @@ func New() (*App, error) {
 	retrieveBatchHandler := handlers.NewRetrieveBatchHandler(batchShortenerService, cfg.ShortBaseAddr)
 	pingHandler := handlers.NewPingHandler(pingService)
 
+	authMiddleware := middleware.NewAuthMiddleware(authService)
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Compress)
+	r.Use(authMiddleware.JWT)
 
 	r.Post("/api/shorten/batch", shortenBatchHandler.HandleHTTP)
 	r.Post("/api/shorten", apiShortenHandler.HandleHTTP)
@@ -86,6 +92,9 @@ func New() (*App, error) {
 
 func (app *App) Run() error {
 	defer app.storage.Close()
+	defer logger.Log.Sync()
+
+	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
 
 	err := http.ListenAndServe(app.cfg.ServerAddr, app.router)
 	if err != nil {

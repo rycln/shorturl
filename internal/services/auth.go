@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/rycln/shorturl/internal/models"
 )
 
@@ -22,10 +21,6 @@ func NewAuth(jwtkey string, jwtExp time.Duration) *Auth {
 		jwtKey: jwtkey,
 		jwtExp: jwtExp,
 	}
-}
-
-func (s *Auth) MakeUserID() string {
-	return uuid.NewString()
 }
 
 type jwtClaims struct {

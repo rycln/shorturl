@@ -13,14 +13,6 @@ const testKey = "secret"
 
 var testJWTExp = time.Duration(1) * time.Minute
 
-func TestAuth_MakeUserID(t *testing.T) {
-	s := Auth{}
-	t.Run("valid test", func(t *testing.T) {
-		uid := s.MakeUserID()
-		assert.NotEmpty(t, uid)
-	})
-}
-
 func TestAuth_NewJWTString(t *testing.T) {
 	jwtService := NewAuth(testKey, testJWTExp)
 

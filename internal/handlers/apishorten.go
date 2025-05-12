@@ -3,20 +3,22 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
 )
 
 type apiShortenServicer interface {
-	ShortenURL(context.Context, models.OrigURL) (*models.URLPair, error)
+	ShortenURL(context.Context, models.UserID, models.OrigURL) (*models.URLPair, error)
 }
 
 type APIShortenHandler struct {
-	apiShortenService shortenServicer
+	apiShortenService apiShortenServicer
 	baseAddr          string
 }
 
@@ -41,6 +43,13 @@ type apiShortenRes struct {
 }
 
 func (h *APIShortenHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
+	if !ok {
+		res.WriteHeader(http.StatusInternalServerError)
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		return
+	}
+
 	var reqBody apiShortenReq
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -55,7 +64,7 @@ func (h *APIShortenHandler) HandleHTTP(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	pair, err := h.apiShortenService.ShortenURL(req.Context(), models.OrigURL(reqBody.URL))
+	pair, err := h.apiShortenService.ShortenURL(req.Context(), uid, models.OrigURL(reqBody.URL))
 	if e, ok := err.(errAPIShortenConflict); ok && e.IsErrConflict() {
 		err := h.sendResponse(res, http.StatusConflict, string(pair.Short))
 		if err != nil {
