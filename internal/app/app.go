@@ -78,8 +78,9 @@ func New() (*App, error) {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
-	r.Use(middleware.Compress)
+	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(cfg.Timeout))
+	r.Use(middleware.Compress)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(authMiddleware.JWT)
