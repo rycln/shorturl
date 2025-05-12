@@ -11,17 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
-type deleteBatchServicer interface {
-	UserURLsAsyncDeletion(models.UserID, []models.ShortURL)
+type deletionProcessor interface {
+	AddURLsIntoDeletionQueue(models.UserID, []models.ShortURL)
 }
 
 type DeleteBatchHandler struct {
-	deleteBatchService deleteBatchServicer
+	delProc deletionProcessor
 }
 
-func NewDeleteBatchHandler(deleteBatchService deleteBatchServicer) *DeleteBatchHandler {
+func NewDeleteBatchHandler(delProc deletionProcessor) *DeleteBatchHandler {
 	return &DeleteBatchHandler{
-		deleteBatchService: deleteBatchService,
+		delProc: delProc,
 	}
 }
 
@@ -41,6 +41,6 @@ func (h *DeleteBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	h.deleteBatchService.UserURLsAsyncDeletion(models.UserID(uid), surls)
+	h.delProc.AddURLsIntoDeletionQueue(models.UserID(uid), surls)
 	res.WriteHeader(http.StatusAccepted)
 }

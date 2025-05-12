@@ -152,7 +152,7 @@ func TestAppMemStorage_GetURLPairBatchByUserID(t *testing.T) {
 func TestAppMemStorage_DeleteRequestedURLs(t *testing.T) {
 	strg := NewAppMemStorage()
 
-	delurls := []models.DelURLReq{
+	delurls := []*models.DelURLReq{
 		{
 			UID:   testUserID,
 			Short: testShortURL,

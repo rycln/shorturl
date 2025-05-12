@@ -211,8 +211,8 @@ func TestDatabaseStorage_DeleteRequestedURLs(t *testing.T) {
 
 	expectedQuery := regexp.QuoteMeta(sqlDeleteRequestedURLs)
 
-	delurls := []models.DelURLReq{
-		testDelReq,
+	delurls := []*models.DelURLReq{
+		&testDelReq,
 	}
 
 	t.Run("valid test", func(t *testing.T) {

@@ -134,7 +134,7 @@ func (s *AppMemStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.
 	return pairs, nil
 }
 
-func (s *AppMemStorage) DeleteRequestedURLs(ctx context.Context, delurls []models.DelURLReq) error {
+func (s *AppMemStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models.DelURLReq) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

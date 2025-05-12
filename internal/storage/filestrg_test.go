@@ -185,7 +185,7 @@ func TestFileStorage_DeleteRequestedURLs(t *testing.T) {
 	defer os.Remove(strg.strgFileName)
 	defer os.Remove(strg.delFileName)
 
-	delurls := []models.DelURLReq{
+	delurls := []*models.DelURLReq{
 		{
 			UID:   testUserID,
 			Short: testShortURL,

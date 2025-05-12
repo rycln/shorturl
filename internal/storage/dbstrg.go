@@ -107,7 +107,7 @@ func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid model
 	return pairs, nil
 }
 
-func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []models.DelURLReq) error {
+func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models.DelURLReq) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

@@ -86,7 +86,7 @@ func (s *FileStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.Us
 	return s.getAllUserPairs(ctx, uid)
 }
 
-func (s *FileStorage) DeleteRequestedURLs(ctx context.Context, delurls []models.DelURLReq) error {
+func (s *FileStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models.DelURLReq) error {
 	for _, delurl := range delurls {
 		select {
 		case <-ctx.Done():
@@ -94,7 +94,7 @@ func (s *FileStorage) DeleteRequestedURLs(ctx context.Context, delurls []models.
 		default:
 		}
 
-		err := s.writeIntoDelFile(&delurl)
+		err := s.writeIntoDelFile(delurl)
 		if err != nil {
 			return err
 		}

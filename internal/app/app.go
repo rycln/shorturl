@@ -14,16 +14,19 @@ import (
 	"github.com/rycln/shorturl/internal/middleware"
 	"github.com/rycln/shorturl/internal/services"
 	"github.com/rycln/shorturl/internal/storage"
+	"github.com/rycln/shorturl/internal/worker"
 )
 
 const (
 	lengthOfShortURL = 7
 	jwtExpires       = time.Duration(2) * time.Hour
+	tickerPeriod     = time.Duration(10) * time.Second
 )
 
 type App struct {
 	router  *chi.Mux
 	storage storage.Storage
+	worker  *worker.DeletionProcessor
 	cfg     *config.Cfg
 }
 
@@ -57,6 +60,9 @@ func New() (*App, error) {
 	batchShortenerService := services.NewBatchShortener(strg, hashService)
 	pingService := services.NewPing(strg)
 	authService := services.NewAuth(cfg.Key, jwtExpires)
+	deleteBatchService := services.NewBatchDeleter(strg)
+
+	worker := worker.NewDeletionProcessor(deleteBatchService)
 
 	shortenHandler := handlers.NewShortenHandler(shortenerService, cfg.ShortBaseAddr)
 	apiShortenHandler := handlers.NewAPIShortenHandler(shortenerService, cfg.ShortBaseAddr)
@@ -64,6 +70,7 @@ func New() (*App, error) {
 	shortenBatchHandler := handlers.NewShortenBatchHandler(batchShortenerService, cfg.ShortBaseAddr)
 	retrieveBatchHandler := handlers.NewRetrieveBatchHandler(batchShortenerService, cfg.ShortBaseAddr)
 	pingHandler := handlers.NewPingHandler(pingService)
+	deleteBatchHandler := handlers.NewDeleteBatchHandler(worker)
 
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
@@ -76,6 +83,7 @@ func New() (*App, error) {
 	r.Post("/api/shorten/batch", shortenBatchHandler.HandleHTTP)
 	r.Post("/api/shorten", apiShortenHandler.HandleHTTP)
 	r.Get("/api/user/urls", retrieveBatchHandler.HandleHTTP)
+	r.Delete("/api/user/urls", deleteBatchHandler.HandleHTTP)
 	r.Get("/ping", pingHandler.HandleHTTP)
 	r.Get("/{short}", func(res http.ResponseWriter, req *http.Request) {
 		ctx := context.WithValue(req.Context(), contextkeys.ShortURL, chi.URLParam(req, "short"))
@@ -86,6 +94,7 @@ func New() (*App, error) {
 	return &App{
 		router:  r,
 		storage: strg,
+		worker:  worker,
 		cfg:     cfg,
 	}, nil
 }
@@ -93,6 +102,9 @@ func New() (*App, error) {
 func (app *App) Run() error {
 	defer app.storage.Close()
 	defer logger.Log.Sync()
+
+	app.worker.Run(tickerPeriod, app.cfg.Timeout)
+	defer app.worker.Shutdown()
 
 	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
 

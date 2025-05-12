@@ -36,7 +36,7 @@ func (m *MockBatchDeleterStorage) EXPECT() *MockBatchDeleterStorageMockRecorder 
 }
 
 // DeleteRequestedURLs mocks base method.
-func (m *MockBatchDeleterStorage) DeleteRequestedURLs(arg0 context.Context, arg1 []models.DelURLReq) error {
+func (m *MockBatchDeleterStorage) DeleteRequestedURLs(arg0 context.Context, arg1 []*models.DelURLReq) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteRequestedURLs", arg0, arg1)
 	ret0, _ := ret[0].(error)
