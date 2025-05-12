@@ -36,34 +36,36 @@ func (p *DeletionProcessor) Shutdown() {
 }
 
 func (p *DeletionProcessor) Run(period time.Duration, timeout time.Duration) {
-	inChan := fanIn(p.ctx, p.delChans)
+	go func() {
+		inChan := fanIn(p.ctx, p.delChans)
 
-	tick := time.NewTicker(period)
+		tick := time.NewTicker(period)
 
-	var delBatch []*models.DelURLReq
+		var delBatch []*models.DelURLReq
 
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		case durl := <-inChan:
-			delBatch = append(delBatch, durl)
-		case <-tick.C:
-			if len(delBatch) == 0 {
-				continue
-			}
+		for {
+			select {
+			case <-p.ctx.Done():
+				return
+			case durl := <-inChan:
+				delBatch = append(delBatch, durl)
+			case <-tick.C:
+				if len(delBatch) == 0 {
+					continue
+				}
 
-			ctx, cancel := context.WithTimeout(p.ctx, timeout)
-			err := p.batchDeleteService.DeleteURLsBatch(ctx, delBatch)
-			if err != nil {
-				logger.Log.Info("Cannot delete batch", zap.Error(err))
+				ctx, cancel := context.WithTimeout(p.ctx, timeout)
+				err := p.batchDeleteService.DeleteURLsBatch(ctx, delBatch)
+				if err != nil {
+					logger.Log.Info("Cannot delete batch", zap.Error(err))
+					cancel()
+					continue
+				}
 				cancel()
-				continue
+				delBatch = nil
 			}
-			cancel()
-			delBatch = nil
 		}
-	}
+	}()
 }
 
 func (p *DeletionProcessor) AddURLsIntoDeletionQueue(uid models.UserID, shorts []models.ShortURL) {
