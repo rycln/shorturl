@@ -49,9 +49,14 @@ func (m *AuthMiddleware) JWT(h http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), contextkeys.UserID, userID)
-
+		cookie := &http.Cookie{
+			Name:  "jwt",
+			Value: jwtString,
+		}
+		http.SetCookie(w, cookie)
 		w.Header().Set("Authorization", "Bearer "+jwtString)
+
+		ctx := context.WithValue(r.Context(), contextkeys.UserID, userID)
 		h.ServeHTTP(w, r.WithContext(ctx))
 	}
 
