@@ -213,16 +213,16 @@ func (mr *MockerrConflictMockRecorder) Error() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Error", reflect.TypeOf((*MockerrConflict)(nil).Error))
 }
 
-// IsConflict mocks base method.
-func (m *MockerrConflict) IsConflict() bool {
+// IsErrConflict mocks base method.
+func (m *MockerrConflict) IsErrConflict() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsConflict")
+	ret := m.ctrl.Call(m, "IsErrConflict")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsConflict indicates an expected call of IsConflict.
-func (mr *MockerrConflictMockRecorder) IsConflict() *gomock.Call {
+// IsErrConflict indicates an expected call of IsErrConflict.
+func (mr *MockerrConflictMockRecorder) IsErrConflict() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsConflict", reflect.TypeOf((*MockerrConflict)(nil).IsConflict))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsErrConflict", reflect.TypeOf((*MockerrConflict)(nil).IsErrConflict))
 }

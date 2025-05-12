@@ -27,7 +27,7 @@ type hasher interface {
 
 type errConflict interface {
 	error
-	IsConflict() bool
+	IsErrConflict() bool
 }
 
 type Shortener struct {
@@ -50,7 +50,7 @@ func (s *Shortener) ShortenURL(ctx context.Context, uid models.UserID, orig mode
 		Orig:  orig,
 	}
 	err := s.strg.AddURLPair(ctx, pair)
-	if e, ok := err.(errConflict); ok && e.IsConflict() {
+	if e, ok := err.(errConflict); ok && e.IsErrConflict() {
 		return pair, err
 	}
 	if err != nil {

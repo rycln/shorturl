@@ -36,7 +36,7 @@ func TestShortener_ShortenURL(t *testing.T) {
 	})
 
 	t.Run("conflict error", func(t *testing.T) {
-		mErr.EXPECT().IsConflict().Return(true)
+		mErr.EXPECT().IsErrConflict().Return(true)
 		mHash.EXPECT().GenerateHashFromURL(wantPair.Orig).Return(wantPair.Short)
 		mStrg.EXPECT().AddURLPair(context.Background(), &wantPair).Return(mErr)
 
