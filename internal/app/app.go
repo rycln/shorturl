@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	chimiddleware "github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/rycln/shorturl/internal/config"
 	"github.com/rycln/shorturl/internal/contextkeys"
@@ -78,18 +79,26 @@ func New() (*App, error) {
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Compress)
-	r.Use(authMiddleware.JWT)
+	r.Use(chimiddleware.Timeout(cfg.Timeout))
 
-	r.Post("/api/shorten/batch", shortenBatchHandler.HandleHTTP)
-	r.Post("/api/shorten", apiShortenHandler.HandleHTTP)
-	r.Get("/api/user/urls", retrieveBatchHandler.HandleHTTP)
-	r.Delete("/api/user/urls", deleteBatchHandler.HandleHTTP)
+	r.Route("/api", func(r chi.Router) {
+		r.Use(authMiddleware.JWT)
+		r.Route("/shorten", func(r chi.Router) {
+			r.Post("/batch", shortenBatchHandler.HandleHTTP)
+			r.Post("/", apiShortenHandler.HandleHTTP)
+		})
+		r.Route("/user/urls", func(r chi.Router) {
+			r.Get("/", retrieveBatchHandler.HandleHTTP)
+			r.Delete("/", deleteBatchHandler.HandleHTTP)
+		})
+	})
+	r.With(authMiddleware.JWT).Post("/", shortenHandler.ServeHTTP)
+
 	r.Get("/ping", pingHandler.HandleHTTP)
 	r.Get("/{short}", func(res http.ResponseWriter, req *http.Request) {
 		ctx := context.WithValue(req.Context(), contextkeys.ShortURL, chi.URLParam(req, "short"))
 		retrieveHandler.HandleHTTP(res, req.WithContext(ctx))
 	})
-	r.Post("/", shortenHandler.ServeHTTP)
 
 	return &App{
 		router:  r,
