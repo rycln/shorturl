@@ -3,10 +3,8 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 
-	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
@@ -18,14 +16,20 @@ type shortenBatchServicer interface {
 	BatchShortenURL(context.Context, models.UserID, []models.OrigURL) ([]models.URLPair, error)
 }
 
+type shortenBatchAuthServicer interface {
+	GetUserIDFromCtx(context.Context) (models.UserID, error)
+}
+
 type ShortenBatchHandler struct {
 	shortenBatchService shortenBatchServicer
+	authService         shortenBatchAuthServicer
 	baseAddr            string
 }
 
-func NewShortenBatchHandler(shortenBatchService shortenBatchServicer, baseAddr string) *ShortenBatchHandler {
+func NewShortenBatchHandler(shortenBatchService shortenBatchServicer, authService shortenBatchAuthServicer, baseAddr string) *ShortenBatchHandler {
 	return &ShortenBatchHandler{
 		shortenBatchService: shortenBatchService,
+		authService:         authService,
 		baseAddr:            baseAddr,
 	}
 }
@@ -41,15 +45,15 @@ type shortenBatchRes struct {
 }
 
 func (h *ShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
-	if !ok {
+	uid, err := h.authService.GetUserIDFromCtx(req.Context())
+	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))
 		return
 	}
 
 	var reqBody []shortenBatchReq
-	err := json.NewDecoder(req.Body).Decode(&reqBody)
+	err = json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))

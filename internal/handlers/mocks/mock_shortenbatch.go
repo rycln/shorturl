@@ -49,3 +49,41 @@ func (mr *MockshortenBatchServicerMockRecorder) BatchShortenURL(arg0, arg1, arg2
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchShortenURL", reflect.TypeOf((*MockshortenBatchServicer)(nil).BatchShortenURL), arg0, arg1, arg2)
 }
+
+// MockshortenBatchAuthServicer is a mock of shortenBatchAuthServicer interface.
+type MockshortenBatchAuthServicer struct {
+	ctrl     *gomock.Controller
+	recorder *MockshortenBatchAuthServicerMockRecorder
+}
+
+// MockshortenBatchAuthServicerMockRecorder is the mock recorder for MockshortenBatchAuthServicer.
+type MockshortenBatchAuthServicerMockRecorder struct {
+	mock *MockshortenBatchAuthServicer
+}
+
+// NewMockshortenBatchAuthServicer creates a new mock instance.
+func NewMockshortenBatchAuthServicer(ctrl *gomock.Controller) *MockshortenBatchAuthServicer {
+	mock := &MockshortenBatchAuthServicer{ctrl: ctrl}
+	mock.recorder = &MockshortenBatchAuthServicerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockshortenBatchAuthServicer) EXPECT() *MockshortenBatchAuthServicerMockRecorder {
+	return m.recorder
+}
+
+// GetUserIDFromCtx mocks base method.
+func (m *MockshortenBatchAuthServicer) GetUserIDFromCtx(arg0 context.Context) (models.UserID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserIDFromCtx", arg0)
+	ret0, _ := ret[0].(models.UserID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserIDFromCtx indicates an expected call of GetUserIDFromCtx.
+func (mr *MockshortenBatchAuthServicerMockRecorder) GetUserIDFromCtx(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserIDFromCtx", reflect.TypeOf((*MockshortenBatchAuthServicer)(nil).GetUserIDFromCtx), arg0)
+}
