@@ -17,7 +17,7 @@ func TestShortenHandler_ServeHTTP(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mShort := mocks.NewMockapiShortenServicer(ctrl)
+	mShort := mocks.NewMockshortenServicer(ctrl)
 	mAuth := mocks.NewMockshortenAuthServicer(ctrl)
 
 	shortenHandler := NewShortenHandler(mShort, mAuth, testBaseAddr)

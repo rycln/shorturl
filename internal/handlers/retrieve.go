@@ -31,7 +31,7 @@ func NewRetrieveHandler(retrieveService retrieveServicer) *RetrieveHandler {
 	}
 }
 
-func (h *RetrieveHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *RetrieveHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	shortURL, err := h.retrieveService.GetShortURLFromCtx(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)

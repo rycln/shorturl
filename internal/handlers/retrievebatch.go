@@ -44,7 +44,7 @@ type retBatchRes struct {
 	OrigURL  string `json:"original_url"`
 }
 
-func (h *RetrieveBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *RetrieveBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)

@@ -24,7 +24,7 @@ func NewPingHandler(pingService pingServicer) *PingHandler {
 	}
 }
 
-func (h *PingHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *PingHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	err := h.pingService.PingStorage(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)

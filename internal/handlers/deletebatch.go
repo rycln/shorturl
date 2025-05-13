@@ -32,7 +32,7 @@ func NewDeleteBatchHandler(delProc deletionProcessor, authService deleteBatchAut
 	}
 }
 
-func (h *DeleteBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *DeleteBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)

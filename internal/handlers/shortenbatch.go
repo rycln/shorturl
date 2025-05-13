@@ -40,7 +40,7 @@ type shortenBatchRes struct {
 	ShortURL string `json:"short_url"`
 }
 
-func (h *ShortenBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *ShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
 	if !ok {
 		res.WriteHeader(http.StatusInternalServerError)

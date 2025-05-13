@@ -85,20 +85,20 @@ func New() (*App, error) {
 	r.Route("/api", func(r chi.Router) {
 		r.Use(authMiddleware.JWT)
 		r.Route("/shorten", func(r chi.Router) {
-			r.Post("/batch", shortenBatchHandler.HandleHTTP)
-			r.Post("/", apiShortenHandler.HandleHTTP)
+			r.Post("/batch", shortenBatchHandler.ServeHTTP)
+			r.Post("/", apiShortenHandler.ServeHTTP)
 		})
 		r.Route("/user/urls", func(r chi.Router) {
-			r.Get("/", retrieveBatchHandler.HandleHTTP)
-			r.Delete("/", deleteBatchHandler.HandleHTTP)
+			r.Get("/", retrieveBatchHandler.ServeHTTP)
+			r.Delete("/", deleteBatchHandler.ServeHTTP)
 		})
 	})
 	r.With(authMiddleware.JWT).Post("/", shortenHandler.ServeHTTP)
 
-	r.Get("/ping", pingHandler.HandleHTTP)
+	r.Get("/ping", pingHandler.ServeHTTP)
 	r.Get("/{short}", func(res http.ResponseWriter, req *http.Request) {
 		ctx := context.WithValue(req.Context(), contextkeys.ShortURL, chi.URLParam(req, "short"))
-		retrieveHandler.HandleHTTP(res, req.WithContext(ctx))
+		retrieveHandler.ServeHTTP(res, req.WithContext(ctx))
 	})
 
 	return &App{

@@ -48,7 +48,7 @@ type apiShortenRes struct {
 	Result string `json:"result"`
 }
 
-func (h *APIShortenHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
