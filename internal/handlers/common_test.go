@@ -22,9 +22,4 @@ var (
 		Short: testShortURL,
 		Orig:  testOrigURL,
 	}
-
-	testDelReq = models.DelURLReq{
-		UID:   testUserID,
-		Short: testDeletedShort,
-	}
 )
