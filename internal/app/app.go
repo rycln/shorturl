@@ -68,7 +68,7 @@ func New() (*App, error) {
 	shortenHandler := handlers.NewShortenHandler(shortenerService, authService, cfg.ShortBaseAddr)
 	apiShortenHandler := handlers.NewAPIShortenHandler(shortenerService, authService, cfg.ShortBaseAddr)
 	retrieveHandler := handlers.NewRetrieveHandler(shortenerService)
-	shortenBatchHandler := handlers.NewShortenBatchHandler(batchShortenerService, cfg.ShortBaseAddr)
+	shortenBatchHandler := handlers.NewShortenBatchHandler(batchShortenerService, authService, cfg.ShortBaseAddr)
 	retrieveBatchHandler := handlers.NewRetrieveBatchHandler(batchShortenerService, authService, cfg.ShortBaseAddr)
 	pingHandler := handlers.NewPingHandler(pingService)
 	deleteBatchHandler := handlers.NewDeleteBatchHandler(worker, authService)
