@@ -2,23 +2,28 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
 
-	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type shortenServicer interface {
 	ShortenURL(context.Context, models.UserID, models.OrigURL) (*models.URLPair, error)
 }
 
+type shortenAuthServicer interface {
+	GetUserIDFromCtx(context.Context) (models.UserID, error)
+}
+
 type ShortenHandler struct {
 	shortenService shortenServicer
+	authService    shortenAuthServicer
 	baseAddr       string
 }
 
@@ -27,18 +32,19 @@ type errShortenConflict interface {
 	IsErrConflict() bool
 }
 
-func NewShortenHandler(shortenService shortenServicer, baseAddr string) *ShortenHandler {
+func NewShortenHandler(shortenService shortenServicer, authService shortenAuthServicer, baseAddr string) *ShortenHandler {
 	return &ShortenHandler{
 		shortenService: shortenService,
+		authService:    authService,
 		baseAddr:       baseAddr,
 	}
 }
 
 func (h *ShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
-	if !ok {
+	uid, err := h.authService.GetUserIDFromCtx(req.Context())
+	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))
 		return
 	}
 

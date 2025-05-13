@@ -12,6 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type shortenBatchServicer interface {
 	BatchShortenURL(context.Context, models.UserID, []models.OrigURL) ([]models.URLPair, error)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/models"
 	"github.com/rycln/shorturl/internal/services/mocks"
 	"github.com/stretchr/testify/assert"
@@ -76,5 +77,27 @@ func TestShortener_GetOrigURLByShort(t *testing.T) {
 
 		_, err := s.GetOrigURLByShort(context.Background(), testShortURL)
 		assert.Error(t, err)
+	})
+}
+
+func TestShortener_GetShortURLFromCtx(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mHash := mocks.NewMockhasher(ctrl)
+	mStrg := mocks.NewMockShortenerStorage(ctrl)
+
+	s := NewShortener(mStrg, mHash)
+
+	t.Run("valid test", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), contextkeys.ShortURL, string(testShortURL))
+		short, err := s.GetShortURLFromCtx(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, testShortURL, short)
+	})
+
+	t.Run("no short url error", func(t *testing.T) {
+		_, err := s.GetShortURLFromCtx(context.Background())
+		assert.ErrorIs(t, err, ErrNoShortURL)
 	})
 }

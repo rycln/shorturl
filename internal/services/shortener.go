@@ -2,11 +2,15 @@ package services
 
 import (
 	"context"
+	"errors"
 
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/models"
 )
 
 //go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
+var ErrNoShortURL = errors.New("short URL value is empty")
 
 type urlSaver interface {
 	AddURLPair(context.Context, *models.URLPair) error
@@ -65,4 +69,12 @@ func (s *Shortener) GetOrigURLByShort(ctx context.Context, short models.ShortURL
 		return "", err
 	}
 	return pair.Orig, nil
+}
+
+func (s *Shortener) GetShortURLFromCtx(ctx context.Context) (models.ShortURL, error) {
+	shortURL, ok := ctx.Value(contextkeys.ShortURL).(string)
+	if !ok {
+		return "", ErrNoShortURL
+	}
+	return models.ShortURL(shortURL), nil
 }

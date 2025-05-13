@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,5 +56,21 @@ func TestParseIDFromAuthHeader(t *testing.T) {
 		require.NoError(t, err)
 		_, err = jwtService.ParseIDFromAuthHeader(authHeader)
 		assert.Error(t, err)
+	})
+}
+
+func TestAuth_GetUserIDFromCtx(t *testing.T) {
+	jwtService := NewAuth(testKey, testJWTExp)
+
+	t.Run("valid test", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), contextkeys.UserID, testUserID)
+		uid, err := jwtService.GetUserIDFromCtx(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, testUserID, uid)
+	})
+
+	t.Run("no user id error", func(t *testing.T) {
+		_, err := jwtService.GetUserIDFromCtx(context.Background())
+		assert.ErrorIs(t, err, ErrNoUserID)
 	})
 }

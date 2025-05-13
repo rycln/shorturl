@@ -1,15 +1,17 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/models"
 )
 
-var ErrNoUserID = errors.New("jwt does not contain user id")
+var ErrNoUserID = errors.New("does not contain user id")
 
 type Auth struct {
 	jwtKey string
@@ -62,4 +64,12 @@ func (s *Auth) ParseIDFromAuthHeader(header string) (models.UserID, error) {
 		return "", err
 	}
 	return claims.UserID, nil
+}
+
+func (s *Auth) GetUserIDFromCtx(ctx context.Context) (models.UserID, error) {
+	uid, ok := ctx.Value(contextkeys.UserID).(models.UserID)
+	if !ok {
+		return "", ErrNoUserID
+	}
+	return uid, nil
 }

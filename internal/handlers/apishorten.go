@@ -3,22 +3,27 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 
-	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type apiShortenServicer interface {
 	ShortenURL(context.Context, models.UserID, models.OrigURL) (*models.URLPair, error)
 }
 
+type apiShortenAuthServicer interface {
+	GetUserIDFromCtx(context.Context) (models.UserID, error)
+}
+
 type APIShortenHandler struct {
 	apiShortenService apiShortenServicer
+	authService       apiShortenAuthServicer
 	baseAddr          string
 }
 
@@ -27,9 +32,10 @@ type errAPIShortenConflict interface {
 	IsErrConflict() bool
 }
 
-func NewAPIShortenHandler(apiShortenService apiShortenServicer, baseAddr string) *APIShortenHandler {
+func NewAPIShortenHandler(apiShortenService apiShortenServicer, authService apiShortenAuthServicer, baseAddr string) *APIShortenHandler {
 	return &APIShortenHandler{
 		apiShortenService: apiShortenService,
+		authService:       authService,
 		baseAddr:          baseAddr,
 	}
 }
@@ -43,15 +49,15 @@ type apiShortenRes struct {
 }
 
 func (h *APIShortenHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
-	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
-	if !ok {
+	uid, err := h.authService.GetUserIDFromCtx(req.Context())
+	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))
 		return
 	}
 
 	var reqBody apiShortenReq
-	err := json.NewDecoder(req.Body).Decode(&reqBody)
+	err = json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))

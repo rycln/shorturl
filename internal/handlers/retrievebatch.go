@@ -3,21 +3,26 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 
-	"github.com/rycln/shorturl/internal/contextkeys"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/models"
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type retrieveBatchServicer interface {
 	GetUserURLs(context.Context, models.UserID) ([]models.URLPair, error)
 }
 
+type retrieveBatchAuthServicer interface {
+	GetUserIDFromCtx(context.Context) (models.UserID, error)
+}
+
 type RetrieveBatchHandler struct {
 	retrieveBatchService retrieveBatchServicer
+	authService          retrieveBatchAuthServicer
 	baseAddr             string
 }
 
@@ -26,9 +31,10 @@ type errRetrieveBatchNotExist interface {
 	IsErrNotExist() bool
 }
 
-func NewRetrieveBatchHandler(retrieveBatchService retrieveBatchServicer, baseAddr string) *RetrieveBatchHandler {
+func NewRetrieveBatchHandler(retrieveBatchService retrieveBatchServicer, authService retrieveBatchAuthServicer, baseAddr string) *RetrieveBatchHandler {
 	return &RetrieveBatchHandler{
 		retrieveBatchService: retrieveBatchService,
+		authService:          authService,
 		baseAddr:             baseAddr,
 	}
 }
@@ -39,10 +45,10 @@ type retBatchRes struct {
 }
 
 func (h *RetrieveBatchHandler) HandleHTTP(res http.ResponseWriter, req *http.Request) {
-	uid, ok := req.Context().Value(contextkeys.UserID).(models.UserID)
-	if !ok {
+	uid, err := h.authService.GetUserIDFromCtx(req.Context())
+	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		logger.Log.Debug("path:"+req.URL.Path, zap.Error(errors.New("short URL value is empty")))
+		logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))
 		return
 	}
 

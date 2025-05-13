@@ -65,13 +65,13 @@ func New() (*App, error) {
 
 	worker := worker.NewDeletionProcessor(deleteBatchService)
 
-	shortenHandler := handlers.NewShortenHandler(shortenerService, cfg.ShortBaseAddr)
-	apiShortenHandler := handlers.NewAPIShortenHandler(shortenerService, cfg.ShortBaseAddr)
+	shortenHandler := handlers.NewShortenHandler(shortenerService, authService, cfg.ShortBaseAddr)
+	apiShortenHandler := handlers.NewAPIShortenHandler(shortenerService, authService, cfg.ShortBaseAddr)
 	retrieveHandler := handlers.NewRetrieveHandler(shortenerService)
 	shortenBatchHandler := handlers.NewShortenBatchHandler(batchShortenerService, cfg.ShortBaseAddr)
-	retrieveBatchHandler := handlers.NewRetrieveBatchHandler(batchShortenerService, cfg.ShortBaseAddr)
+	retrieveBatchHandler := handlers.NewRetrieveBatchHandler(batchShortenerService, authService, cfg.ShortBaseAddr)
 	pingHandler := handlers.NewPingHandler(pingService)
-	deleteBatchHandler := handlers.NewDeleteBatchHandler(worker)
+	deleteBatchHandler := handlers.NewDeleteBatchHandler(worker, authService)
 
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
