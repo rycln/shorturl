@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
+
 type authServicer interface {
 	NewJWTString(models.UserID) (string, error)
 	ParseIDFromAuthHeader(string) (models.UserID, error)
@@ -40,21 +42,21 @@ func (m *AuthMiddleware) JWT(h http.Handler) http.Handler {
 
 		if userID == "" {
 			userID = models.UserID(uuid.NewString())
-		}
 
-		jwtString, err := m.authService.NewJWTString(userID)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			logger.Log.Debug("auth middleware", zap.Error(err))
-			return
-		}
+			jwtString, err := m.authService.NewJWTString(userID)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				logger.Log.Debug("auth middleware", zap.Error(err))
+				return
+			}
 
-		cookie := &http.Cookie{
-			Name:  "jwt",
-			Value: jwtString,
+			cookie := &http.Cookie{
+				Name:  "jwt",
+				Value: jwtString,
+			}
+			http.SetCookie(w, cookie)
+			w.Header().Set("Authorization", "Bearer "+jwtString)
 		}
-		http.SetCookie(w, cookie)
-		w.Header().Set("Authorization", "Bearer "+jwtString)
 
 		ctx := context.WithValue(r.Context(), contextkeys.UserID, userID)
 		h.ServeHTTP(w, r.WithContext(ctx))
