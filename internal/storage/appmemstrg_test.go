@@ -59,6 +59,18 @@ func TestAppMemStorage_AddURLPair(t *testing.T) {
 	})
 }
 
+func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
+	b.Run("AddDuplicate", func(b *testing.B) {
+		storage := NewAppMemStorage()
+		_ = storage.AddURLPair(context.Background(), &testPair)
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_ = storage.AddURLPair(context.Background(), &testPair)
+		}
+	})
+}
+
 func TestAppMemStorage_GetURLPairByShort(t *testing.T) {
 	strg := NewAppMemStorage()
 
@@ -89,6 +101,18 @@ func TestAppMemStorage_GetURLPairByShort(t *testing.T) {
 	t.Run("not exist error", func(t *testing.T) {
 		_, err := strg.GetURLPairByShort(context.Background(), models.ShortURL("not exist"))
 		assert.ErrorIs(t, err, ErrNotExist)
+	})
+}
+
+func BenchmarkAppMemStorage_GetURLPairByShort(b *testing.B) {
+	b.Run("get pair", func(b *testing.B) {
+		storage := NewAppMemStorage()
+		_ = storage.AddURLPair(context.Background(), &testPair)
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			storage.GetURLPairByShort(context.Background(), testShortURL)
+		}
 	})
 }
 
