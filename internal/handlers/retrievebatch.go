@@ -20,6 +20,18 @@ type retrieveBatchAuthServicer interface {
 	GetUserIDFromCtx(context.Context) (models.UserID, error)
 }
 
+// RetrieveBatchHandler handles requests to retrieve all URLs shortened by a user.
+//
+// Provides authenticated access to user's URL history in JSON format.
+// The handler:
+// 1. Extracts user ID from request context (set by auth middleware)
+// 2. Fetches all user's URL pairs from storage
+// 3. Returns formatted JSON response or 204 if no URLs exist
+//
+// Response codes:
+//   - 200 OK: URLs found and returned
+//   - 204 No Content: no URLs found for user
+//   - 500 Internal Server Error: processing failure
 type RetrieveBatchHandler struct {
 	retrieveBatchService retrieveBatchServicer
 	authService          retrieveBatchAuthServicer
@@ -31,6 +43,7 @@ type errRetrieveBatchNotExist interface {
 	IsErrNotExist() bool
 }
 
+// NewRetrieveBatchHandler creates new user URLs handler instance.
 func NewRetrieveBatchHandler(retrieveBatchService retrieveBatchServicer, authService retrieveBatchAuthServicer, baseAddr string) *RetrieveBatchHandler {
 	return &RetrieveBatchHandler{
 		retrieveBatchService: retrieveBatchService,
@@ -44,6 +57,12 @@ type retBatchRes struct {
 	OrigURL  string `json:"original_url"`
 }
 
+// ServeHTTP implements http.Handler interface for user URLs endpoint.
+//
+// Expected request format:
+//
+//	GET /api/user/urls
+//	Authorization: Bearer <token>
 func (h *RetrieveBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {

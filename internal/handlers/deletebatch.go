@@ -20,11 +20,24 @@ type deleteBatchAuthServicer interface {
 	GetUserIDFromCtx(context.Context) (models.UserID, error)
 }
 
+// DeleteBatchHandler handles asynchronous batch URL deletion requests.
+//
+// The handler:
+// 1. Extracts user ID from request context (set by auth middleware)
+// 2. Queues deletion tasks in background
+// 3. Immediately returns 202 Accepted
+//
+// Response codes:
+//   - 202 Accepted: request queued for processing
+//   - 500 Internal Server Error: queue failure
+//
+// Only URL owner can successfully delete URLs.
 type DeleteBatchHandler struct {
 	delProc     deletionProcessor
 	authService deleteBatchAuthServicer
 }
 
+// NewDeleteBatchHandler creates new batch deletion handler instance.
 func NewDeleteBatchHandler(delProc deletionProcessor, authService deleteBatchAuthServicer) *DeleteBatchHandler {
 	return &DeleteBatchHandler{
 		delProc:     delProc,
@@ -32,6 +45,13 @@ func NewDeleteBatchHandler(delProc deletionProcessor, authService deleteBatchAut
 	}
 }
 
+// ServeHTTP implements http.Handler interface for batch deletion endpoint.
+//
+// Expected request format:
+//
+//	DELETE /api/user/urls
+//	Content-Type: application/json
+//	Authorization: Bearer <token>
 func (h *DeleteBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {

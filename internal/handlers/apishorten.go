@@ -21,6 +21,17 @@ type apiShortenAuthServicer interface {
 	GetUserIDFromCtx(context.Context) (models.UserID, error)
 }
 
+// APIShortenHandler handles URL shortening requests.
+//
+// The handler:
+// 1. Extracts user ID from request context (set by auth middleware)
+// 2. Validates input URL from request body
+// 3. Processes through shortening service
+// 4. Returns appropriate HTTP response and body:
+//   - 201 Created: successful shortening
+//   - 400 Bad Request: invalid input
+//   - 409 Conflict: URL already exists
+//   - 500 Internal Server Error: processing failure
 type APIShortenHandler struct {
 	apiShortenService apiShortenServicer
 	authService       apiShortenAuthServicer
@@ -32,6 +43,7 @@ type errAPIShortenConflict interface {
 	IsErrConflict() bool
 }
 
+// NewAPIShortenHandler creates a new handler instance with required dependencies.
 func NewAPIShortenHandler(apiShortenService apiShortenServicer, authService apiShortenAuthServicer, baseAddr string) *APIShortenHandler {
 	return &APIShortenHandler{
 		apiShortenService: apiShortenService,
@@ -48,6 +60,13 @@ type apiShortenRes struct {
 	Result string `json:"result"`
 }
 
+// ServeHTTP implements http.Handler interface for the endpoint.
+//
+// Expected request format:
+//
+//	POST /api/shorten
+//	Content-Type: application/json
+//	Authorization: Bearer <token>
 func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {

@@ -20,12 +20,22 @@ type shortenBatchAuthServicer interface {
 	GetUserIDFromCtx(context.Context) (models.UserID, error)
 }
 
+// ShortenBatchHandler handles batch URL shortening requests.
+//
+// Processes multiple URLs in single operation while preserving order.
+// Response maintains the same correlation IDs as in request for client-side matching.
+//
+// Response codes:
+//   - 201 Created: all URLs processed successfully
+//   - 400 Bad Request: invalid input data
+//   - 500 Internal Server Error: processing failure
 type ShortenBatchHandler struct {
 	shortenBatchService shortenBatchServicer
 	authService         shortenBatchAuthServicer
 	baseAddr            string
 }
 
+// NewShortenBatchHandler creates new batch handler instance.
 func NewShortenBatchHandler(shortenBatchService shortenBatchServicer, authService shortenBatchAuthServicer, baseAddr string) *ShortenBatchHandler {
 	return &ShortenBatchHandler{
 		shortenBatchService: shortenBatchService,
@@ -44,6 +54,13 @@ type shortenBatchRes struct {
 	ShortURL string `json:"short_url"`
 }
 
+// ServeHTTP implements http.Handler interface for batch endpoint.
+//
+// Expected request format:
+//
+//	POST /api/shorten/batch
+//	Content-Type: application/json
+//	Authorization: Bearer <token>
 func (h *ShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uid, err := h.authService.GetUserIDFromCtx(req.Context())
 	if err != nil {

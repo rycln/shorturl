@@ -9,6 +9,7 @@ import (
 	"github.com/rycln/shorturl/internal/logger"
 )
 
+// Config default values
 const (
 	defaultServerAddr = ":8080"
 	defaultBaseAddr   = "http://localhost:8080"
@@ -17,22 +18,48 @@ const (
 	defaultLogLevel   = "debug"
 )
 
+// Cfg contains all application configuration parameters.
+//
+// The structure supports loading from multiple sources:
+// - Environment variables (primary)
+// - Command-line flags (secondary)
+// - Default values (fallback)
+//
+// Tags specify the corresponding environment variable names.
+// StorageType is excluded from env vars as it's derived internally.
 type Cfg struct {
-	ServerAddr      string        `env:"SERVER_ADDRESS"`
-	ShortBaseAddr   string        `env:"BASE_URL"`
-	StorageFilePath string        `env:"FILE_STORAGE_PATH"`
-	DatabaseDsn     string        `env:"DATABASE_DSN"`
-	Timeout         time.Duration `env:"TIMEOUT_DUR"`
-	Key             string        `env:"JWT_KEY"`
-	LogLevel        string        `env:"LOG_LEVEL"`
-	StorageType     string        `env:"-"`
+	// ServerAddr specifies HTTP server listen address (host:port)
+	ServerAddr string `env:"SERVER_ADDRESS"`
+
+	// ShortBaseAddr is the base URL for shortened links (e.g. "https://sh.rt")
+	ShortBaseAddr string `env:"BASE_URL"`
+
+	// StorageFilePath contains path for file-based storage
+	StorageFilePath string `env:"FILE_STORAGE_PATH"`
+
+	// DatabaseDsn specifies database connection string
+	DatabaseDsn string `env:"DATABASE_DSN"`
+
+	// Timeout defines default network operation timeout
+	Timeout time.Duration `env:"TIMEOUT_DUR"`
+
+	// Key contains JWT signing key (min 32 bytes recommended)
+	Key string `env:"JWT_KEY"`
+
+	// LogLevel sets logging verbosity (debug|info|warn|error)
+	LogLevel string `env:"LOG_LEVEL"`
+
+	// StorageType is derived from other parameters (memory|file|db)
+	StorageType string `env:"-"`
 }
 
+// ConfigBuilder implements builder pattern for Cfg.
 type ConfigBuilder struct {
 	cfg *Cfg
 	err error
 }
 
+// NewConfigBuilder creates a new configuration builder with default values.
 func NewConfigBuilder() *ConfigBuilder {
 	return &ConfigBuilder{
 		cfg: &Cfg{
@@ -45,6 +72,7 @@ func NewConfigBuilder() *ConfigBuilder {
 	}
 }
 
+// WithFlagParsing parses command-line flags into configuration.
 func (b *ConfigBuilder) WithFlagParsing() *ConfigBuilder {
 	if b.err != nil {
 		return b
@@ -62,6 +90,9 @@ func (b *ConfigBuilder) WithFlagParsing() *ConfigBuilder {
 	return b
 }
 
+// WithEnvParsing loads environment variables into configuration.
+//
+// Uses struct tags to map variables to fields.
 func (b *ConfigBuilder) WithEnvParsing() *ConfigBuilder {
 	if b.err != nil {
 		return b
@@ -77,6 +108,7 @@ func (b *ConfigBuilder) WithEnvParsing() *ConfigBuilder {
 	return b
 }
 
+// WithDefaultJWTKey sets default jwt key.
 func (b *ConfigBuilder) WithDefaultJWTKey() *ConfigBuilder {
 	if b.err != nil {
 		return b
@@ -105,6 +137,7 @@ func generateKey(n int) (string, error) {
 	return string(key), nil
 }
 
+// WithFilePath sets file storage filepath.
 func (b *ConfigBuilder) WithFilePath(filepath string) *ConfigBuilder {
 	if b.err != nil {
 		return b
@@ -115,6 +148,7 @@ func (b *ConfigBuilder) WithFilePath(filepath string) *ConfigBuilder {
 	return b
 }
 
+// WithServerAddr sets database dsn string.
 func (b *ConfigBuilder) WithDatabaseDsn(dsn string) *ConfigBuilder {
 	if b.err != nil {
 		return b
@@ -125,6 +159,11 @@ func (b *ConfigBuilder) WithDatabaseDsn(dsn string) *ConfigBuilder {
 	return b
 }
 
+// Build finalizes configuration and validates values.
+//
+// Performs storage type auto-detection (prioritizes db > file > memory)
+//
+// Returns error if any required field is invalid.
 func (b *ConfigBuilder) Build() (*Cfg, error) {
 	if b.err != nil {
 		return nil, b.err

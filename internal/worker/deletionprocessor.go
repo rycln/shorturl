@@ -15,6 +15,10 @@ type batchDeleteServicer interface {
 	DeleteURLsBatch(context.Context, []*models.DelURLReq) error
 }
 
+// DeletionProcessor is a background worker that processes URL deletions in batches.
+//
+// The processor collects deletion requests in memory and flushes them to storage
+// either when batch size limit is reached or on timer expiration.
 type DeletionProcessor struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
@@ -22,6 +26,7 @@ type DeletionProcessor struct {
 	delChans           chan chan *models.DelURLReq
 }
 
+// NewDeletionProcessor creates new processor instance.
 func NewDeletionProcessor(batchDeleteService batchDeleteServicer) *DeletionProcessor {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &DeletionProcessor{
@@ -32,11 +37,15 @@ func NewDeletionProcessor(batchDeleteService batchDeleteServicer) *DeletionProce
 	}
 }
 
+// Shutdown stops the processor.
 func (p *DeletionProcessor) Shutdown() {
 	p.cancel()
 	close(p.delChans)
 }
 
+// Run starts the background processing loop.
+//
+// The processor will handle requests until Shutdown() is called.
 func (p *DeletionProcessor) Run(period time.Duration, timeout time.Duration) {
 	go func() {
 		inChan := fanIn(p.ctx, p.delChans)
@@ -70,6 +79,9 @@ func (p *DeletionProcessor) Run(period time.Duration, timeout time.Duration) {
 	}()
 }
 
+// AddURLsIntoDeletionQueue enqueues URLs for deletion.
+//
+// Non-blocking method for use in HTTP handlers.
 func (p *DeletionProcessor) AddURLsIntoDeletionQueue(uid models.UserID, shorts []models.ShortURL) {
 	delCh := make(chan *models.DelURLReq)
 

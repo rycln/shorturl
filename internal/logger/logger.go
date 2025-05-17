@@ -4,8 +4,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// Log is the global logger instance implementing the Logger interface.
 var Log *zap.Logger = zap.NewNop()
 
+// LogInit configures the global Log instance.
 func LogInit(level string) error {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {

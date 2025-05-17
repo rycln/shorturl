@@ -25,11 +25,16 @@ type batchHasher interface {
 	GenerateHashFromURL(models.OrigURL) models.ShortURL
 }
 
+// BatchShortener provides batch operations for URL shortening.
+//
+// The service handles processing of multiple URLs in single operation,
+// optimizing storage access and maintaining consistency.
 type BatchShortener struct {
 	strg   BatchShortenerStorage
 	hasher batchHasher
 }
 
+// NewBatchShortener creates new batch processor instance.
 func NewBatchShortener(strg BatchShortenerStorage, hasher batchHasher) *BatchShortener {
 	return &BatchShortener{
 		strg:   strg,
@@ -37,6 +42,11 @@ func NewBatchShortener(strg BatchShortenerStorage, hasher batchHasher) *BatchSho
 	}
 }
 
+// BatchShortenURL processes multiple URLs in single operation.
+//
+// Accepts slice of original URLs and user ID that owns them.
+// Returns slice of URLPair structures containing both original
+// and shortened versions, maintaining input order.
 func (s *BatchShortener) BatchShortenURL(ctx context.Context, uid models.UserID, origs []models.OrigURL) ([]models.URLPair, error) {
 	var pairs = make([]models.URLPair, len(origs))
 	for i, orig := range origs {
@@ -54,6 +64,9 @@ func (s *BatchShortener) BatchShortenURL(ctx context.Context, uid models.UserID,
 	return pairs, nil
 }
 
+// GetUserURLs retrieves all shortened URLs for specific user.
+//
+// Returns slice of URLPair structures or empty slice if none found.
 func (s *BatchShortener) GetUserURLs(ctx context.Context, uid models.UserID) ([]models.URLPair, error) {
 	pairs, err := s.strg.GetURLPairBatchByUserID(ctx, uid)
 	if err != nil {

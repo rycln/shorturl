@@ -19,12 +19,29 @@ import (
 	"github.com/rycln/shorturl/internal/worker"
 )
 
+// Package-level constants defining core application parameters.
 const (
+	// lengthOfShortURL defines the character length of generated short URLs.
 	lengthOfShortURL = 7
-	jwtExpires       = time.Duration(2) * time.Hour
-	tickerPeriod     = time.Duration(10) * time.Second
+
+	// jwtExpires sets the lifetime duration for JWT authentication tokens.
+	// Used in auth service when generating new tokens.
+	jwtExpires = time.Duration(2) * time.Hour
+
+	// tickerPeriod specifies the interval for batch operations processing.
+	tickerPeriod = time.Duration(10) * time.Second
 )
 
+// App represents the core application layer.
+//
+// The struct combines all main components and manages their lifecycle:
+// - HTTP router (chi)
+// - Background workers
+// - Configuration
+// - Storage
+//
+// Should be created once during application startup using New()
+// and managed as a single unit.
 type App struct {
 	router  *chi.Mux
 	storage storage.Storage
@@ -32,6 +49,15 @@ type App struct {
 	cfg     *config.Cfg
 }
 
+// New constructs and initializes the complete application.
+//
+// Steps performed:
+// 1. Creates all storage layers
+// 2. Initializes services
+// 3. Configures HTTP routing
+// 4. Prepares background workers
+//
+// Returns error if any component fails to initialize.
 func New() (*App, error) {
 	cfg, err := config.NewConfigBuilder().
 		WithFlagParsing().
@@ -128,6 +154,11 @@ func New() (*App, error) {
 	}, nil
 }
 
+// Run starts the application services.
+//
+// Launches:
+// - HTTP server (blocking call)
+// - Background deletion processor
 func (app *App) Run() error {
 	defer app.storage.Close()
 	defer logger.Log.Sync()
