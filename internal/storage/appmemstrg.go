@@ -24,28 +24,30 @@ func (s *AppMemStorage) AddURLPair(ctx context.Context, pair *models.URLPair) er
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for _, userpairs := range s.pairs {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	if userpairs, exists := s.pairs[pair.UID]; exists {
+		if _, ok := userpairs[pair.Short]; ok {
+			return newErrConflict(ErrConflict)
 		}
 
-		_, ok := userpairs[pair.Short]
-		if ok {
+		userpairs[pair.Short] = pair.Orig
+		return nil
+	}
+
+	for _, userpairs := range s.pairs {
+		if _, ok := userpairs[pair.Short]; ok {
 			return newErrConflict(ErrConflict)
 		}
 	}
 
-	_, ok := s.pairs[pair.UID]
-	if ok {
-		s.pairs[pair.UID][pair.Short] = pair.Orig
-		return nil
+	s.pairs[pair.UID] = map[models.ShortURL]models.OrigURL{
+		pair.Short: pair.Orig,
 	}
-
-	var userpair = make(map[models.ShortURL]models.OrigURL)
-	userpair[pair.Short] = pair.Orig
-	s.pairs[pair.UID] = userpair
 
 	return nil
 }
