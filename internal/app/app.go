@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"time"
 
 	chimiddleware "github.com/go-chi/chi/middleware"
@@ -79,26 +80,44 @@ func New() (*App, error) {
 
 	r.Use(middleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.Timeout(cfg.Timeout))
-	r.Use(middleware.Compress)
 
-	r.Route("/api", func(r chi.Router) {
-		r.Use(authMiddleware.JWT)
-		r.Route("/shorten", func(r chi.Router) {
-			r.Post("/batch", shortenBatchHandler.ServeHTTP)
-			r.Post("/", apiShortenHandler.ServeHTTP)
+	r.Group(func(r chi.Router) {
+		r.Use(chimiddleware.Timeout(cfg.Timeout))
+		r.Use(middleware.Compress)
+
+		r.Route("/api", func(r chi.Router) {
+			r.Use(authMiddleware.JWT)
+			r.Route("/shorten", func(r chi.Router) {
+				r.Post("/batch", shortenBatchHandler.ServeHTTP)
+				r.Post("/", apiShortenHandler.ServeHTTP)
+			})
+			r.Route("/user/urls", func(r chi.Router) {
+				r.Get("/", retrieveBatchHandler.ServeHTTP)
+				r.Delete("/", deleteBatchHandler.ServeHTTP)
+			})
 		})
-		r.Route("/user/urls", func(r chi.Router) {
-			r.Get("/", retrieveBatchHandler.ServeHTTP)
-			r.Delete("/", deleteBatchHandler.ServeHTTP)
+		r.With(authMiddleware.JWT).Post("/", shortenHandler.ServeHTTP)
+
+		r.Get("/ping", pingHandler.ServeHTTP)
+		r.Get("/{short}", func(res http.ResponseWriter, req *http.Request) {
+			ctx := context.WithValue(req.Context(), contextkeys.ShortURL, chi.URLParam(req, "short"))
+			retrieveHandler.ServeHTTP(res, req.WithContext(ctx))
 		})
 	})
-	r.With(authMiddleware.JWT).Post("/", shortenHandler.ServeHTTP)
 
-	r.Get("/ping", pingHandler.ServeHTTP)
-	r.Get("/{short}", func(res http.ResponseWriter, req *http.Request) {
-		ctx := context.WithValue(req.Context(), contextkeys.ShortURL, chi.URLParam(req, "short"))
-		retrieveHandler.ServeHTTP(res, req.WithContext(ctx))
+	r.Group(func(r chi.Router) {
+		r.HandleFunc("/debug/pprof/", pprof.Index)
+		r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+		r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+		r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+		r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
+		r.Handle("/debug/pprof/block", pprof.Handler("block"))
+		r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+		r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 	})
 
 	return &App{
