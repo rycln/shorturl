@@ -8,14 +8,23 @@ import (
 
 //go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
 
+// batchURLSaver defines batch URL storage operations.
 type batchURLSaver interface {
+	// AddBatchURLPairs stores multiple URL pairs in single transaction.
 	AddBatchURLPairs(context.Context, []models.URLPair) error
 }
 
+// batchURLFetcher defines user URL retrieval operations.
 type batchURLFetcher interface {
+	// GetURLPairBatchByUserID retrieves all shortened URLs for a specific user.
 	GetURLPairBatchByUserID(context.Context, models.UserID) ([]models.URLPair, error)
 }
 
+// BatchShortenerStorage combines storage operations needed for batch URL processing.
+//
+// The interface composes two fundamental capabilities required by the BatchShortener service:
+//   - Saving multiple URLs in single operation (batchURLSaver)
+//   - Retrieving user's URLs (batchURLFetcher)
 type BatchShortenerStorage interface {
 	batchURLSaver
 	batchURLFetcher

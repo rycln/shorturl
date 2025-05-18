@@ -8,7 +8,9 @@ import (
 
 //go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
 
+// BatchDeleterStorage defines the storage interface required by BatchDeleter service.
 type BatchDeleterStorage interface {
+	// DeleteURLs marks multiple URLs as deleted in storage.
 	DeleteRequestedURLs(context.Context, []*models.DelURLReq) error
 }
 

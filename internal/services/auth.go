@@ -11,7 +11,7 @@ import (
 	"github.com/rycln/shorturl/internal/models"
 )
 
-var ErrNoUserID = errors.New("does not contain user id")
+var errNoUserID = errors.New("does not contain user id")
 
 // Auth provides user authentication services using JWT tokens.
 //
@@ -30,14 +30,16 @@ func NewAuth(jwtkey string, jwtExp time.Duration) *Auth {
 	}
 }
 
+// jwtClaims extends standard JWT claims with application-specific user ID.
 type jwtClaims struct {
 	jwt.RegisteredClaims
 	UserID models.UserID `json:"id"`
 }
 
+// Validate implements custom claims validation logic.
 func (c jwtClaims) Validate() error {
 	if c.UserID == "" {
-		return ErrNoUserID
+		return errNoUserID
 	}
 	return nil
 }
@@ -89,7 +91,7 @@ func (s *Auth) ParseIDFromAuthHeader(header string) (models.UserID, error) {
 func (s *Auth) GetUserIDFromCtx(ctx context.Context) (models.UserID, error) {
 	uid, ok := ctx.Value(contextkeys.UserID).(models.UserID)
 	if !ok {
-		return "", ErrNoUserID
+		return "", errNoUserID
 	}
 	return uid, nil
 }

@@ -18,16 +18,34 @@ type authServicer interface {
 	ParseIDFromAuthHeader(string) (models.UserID, error)
 }
 
+// AuthMiddleware provides JWT-based authentication middleware.
+//
+// The middleware:
+// 1. Extracts and validates JWT token from Authorization header
+// 2. If valid:
+//   - Extracts user ID from token claims
+//   - Stores user ID in request context
+//
+// 3. If invalid/missing:
+//   - Generates new user ID
+//   - Creates new JWT token
+//   - Sets both in response cookies
+//
+// Expected header format:
+//
+//	Authorization: Bearer <token>
 type AuthMiddleware struct {
 	authService authServicer
 }
 
+// NewAuthMiddleware creates new auth middleware instance.
 func NewAuthMiddleware(authService authServicer) *AuthMiddleware {
 	return &AuthMiddleware{
 		authService: authService,
 	}
 }
 
+// JWT returns the middleware function for chi/router.
 func (m *AuthMiddleware) JWT(h http.Handler) http.Handler {
 	auth := func(w http.ResponseWriter, r *http.Request) {
 		var userID models.UserID

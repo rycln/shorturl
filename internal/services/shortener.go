@@ -10,16 +10,25 @@ import (
 
 //go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
 
-var ErrNoShortURL = errors.New("short URL value is empty")
+var errNoShortURL = errors.New("short URL value is empty")
 
+// urlSaver defines URL storage operations.
 type urlSaver interface {
+	// AddURLPair stores URL pair.
 	AddURLPair(context.Context, *models.URLPair) error
 }
 
+// urlFetcher defines URL retrieval operations.
 type urlFetcher interface {
+	// GetURLPairByShort retrieves URL pair by short URL.
 	GetURLPairByShort(context.Context, models.ShortURL) (*models.URLPair, error)
 }
 
+// ShortenerStorage combines storage operations needed for URL processing.
+//
+// The interface composes two fundamental capabilities required by the Shortener service:
+//   - Saving URLs
+//   - Retrieving URLs
 type ShortenerStorage interface {
 	urlSaver
 	urlFetcher
@@ -95,7 +104,7 @@ func (s *Shortener) GetOrigURLByShort(ctx context.Context, short models.ShortURL
 func (s *Shortener) GetShortURLFromCtx(ctx context.Context) (models.ShortURL, error) {
 	shortURL, ok := ctx.Value(contextkeys.ShortURL).(string)
 	if !ok {
-		return "", ErrNoShortURL
+		return "", errNoShortURL
 	}
 	return models.ShortURL(shortURL), nil
 }

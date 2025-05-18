@@ -98,6 +98,6 @@ func TestShortener_GetShortURLFromCtx(t *testing.T) {
 
 	t.Run("no short url error", func(t *testing.T) {
 		_, err := s.GetShortURLFromCtx(context.Background())
-		assert.ErrorIs(t, err, ErrNoShortURL)
+		assert.ErrorIs(t, err, errNoShortURL)
 	})
 }

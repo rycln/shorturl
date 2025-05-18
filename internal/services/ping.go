@@ -4,7 +4,10 @@ import "context"
 
 //go:generate mockgen -source=$GOFILE -destination=./mocks/mock_$GOFILE -package=mocks
 
+// PingStorage defines a contract for storage components that need to provide a health check mechanism.
 type PingStorage interface {
+	// Ping verifies the connection to the storage is still alive.
+	// It returns an error if the connection cannot be established or has been lost.
 	Ping(context.Context) error
 }
 

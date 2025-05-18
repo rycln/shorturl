@@ -71,6 +71,6 @@ func TestAuth_GetUserIDFromCtx(t *testing.T) {
 
 	t.Run("no user id error", func(t *testing.T) {
 		_, err := jwtService.GetUserIDFromCtx(context.Background())
-		assert.ErrorIs(t, err, ErrNoUserID)
+		assert.ErrorIs(t, err, errNoUserID)
 	})
 }
