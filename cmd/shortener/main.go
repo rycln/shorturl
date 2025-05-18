@@ -3,35 +3,17 @@ package main
 import (
 	"log"
 
-	"github.com/gofiber/fiber/v2"
-	config "github.com/rycln/shorturl/configs"
-	"github.com/rycln/shorturl/internal/app/logger"
-	"go.uber.org/zap"
+	"github.com/rycln/shorturl/internal/app"
 )
 
 func main() {
-	err := logger.LogInit()
+	app, err := app.New()
 	if err != nil {
-		log.Fatalf("Can't initialize the logger: %v", err)
+		log.Fatal(err)
 	}
-	defer logger.Log.Sync()
 
-	cfg := config.NewCfg()
-	logger.Log.Info("Server configuration:",
-		zap.String("addr", cfg.GetServerAddr()),
-		zap.String("base_url", cfg.GetBaseAddr()),
-		zap.String("storage", cfg.StorageIs()),
-	)
-
-	app := fiber.New()
-	hs, shutdown := newHandlersSet(cfg)
-	if shutdown != nil {
-		defer shutdown()
-	}
-	routing(app, hs, cfg.GetTimeoutDuration())
-
-	err = app.Listen(cfg.GetServerAddr())
+	err = app.Run()
 	if err != nil {
-		log.Fatalf("Can't start the server: %v", err)
+		log.Fatal(err)
 	}
 }

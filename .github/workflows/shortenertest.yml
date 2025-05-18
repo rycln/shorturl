@@ -61,6 +61,11 @@ jobs:
           cd cmd/shortener
           go build -buildvcs=false -o shortener
 
+      - name: Migrations
+        run: |
+          go install github.com/pressly/goose/v3/cmd/goose@v3.24.1
+          go run ./cmd/migrator -d='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+
       - name: "Code increment #1"
         if: |
           github.ref == 'refs/heads/main' ||
