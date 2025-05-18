@@ -1,3 +1,4 @@
+// Package models defines the core data structures used across application layers.
 package models
 
 // ShortURL contains hash of original URL.
@@ -9,6 +10,9 @@ type ShortURL string
 //
 // Must be a valid HTTP/HTTPS URL.
 type OrigURL string
+
+// UserID identifies the user who created URL
+type UserID string
 
 // URLPair is the core data transfer structure for the URL shortening service.
 //

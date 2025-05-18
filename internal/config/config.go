@@ -1,3 +1,4 @@
+// Package config provides centralized application configuration management.
 package config
 
 import (

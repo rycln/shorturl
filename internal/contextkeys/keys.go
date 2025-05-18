@@ -1,3 +1,4 @@
+// Package contextkeys provides type-safe keys for storing values in request context.
 package contextkeys
 
 type contextKey struct{}

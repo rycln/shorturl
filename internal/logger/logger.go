@@ -1,3 +1,5 @@
+// Package logger provides a thread-safe singleton logger instance
+// with centralized configuration for the application.
 package logger
 
 import (

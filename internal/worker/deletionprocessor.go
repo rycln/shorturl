@@ -1,3 +1,4 @@
+// Package worker implements a background URL deletion processor for the URL shortener service.
 package worker
 
 import (

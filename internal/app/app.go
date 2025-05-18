@@ -1,3 +1,5 @@
+// Package app is the root package that composes all application components
+// into a runnable service.
 package app
 
 import (
