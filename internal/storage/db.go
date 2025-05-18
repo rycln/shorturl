@@ -7,6 +7,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// Connection pool parameters
 const (
 	maxOpenConns    = 0 //unlimited
 	maxIdleConns    = 10
@@ -14,6 +15,7 @@ const (
 	maxConnLifetime = 0 //unlimited
 )
 
+// NewDB creates a new database connection pool with configured settings
 func NewDB(dsn string) (*sql.DB, error) {
 	database, err := sql.Open("pgx", dsn)
 	if err != nil {

@@ -50,7 +50,7 @@ func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL)
 		pair := &models.URLPair{}
 		err := fd.Decode(pair)
 		if err == io.EOF {
-			return nil, ErrNotExist
+			return nil, errNotExist
 		}
 		if err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([
 		err := fd.Decode(pair)
 		if err == io.EOF {
 			if userpairs == nil {
-				return nil, ErrNotExist
+				return nil, errNotExist
 			}
 			return userpairs, nil
 		}

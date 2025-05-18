@@ -5,73 +5,89 @@ import (
 )
 
 var (
-	ErrConflict   = errors.New("shortened URL already exists")
-	ErrNotExist   = errors.New("shortened URL does not exist")
-	ErrDeletedURL = errors.New("URL removed")
+	errConflict   = errors.New("shortened URL already exists")
+	errNotExist   = errors.New("shortened URL does not exist")
+	errDeletedURL = errors.New("URL removed")
 )
 
-type errConflict struct {
+// conflict represents an error when a resource already exists.
+type conflict struct {
 	err error
 }
 
-func (err *errConflict) Error() string {
+// Error returns the string representation of the error.
+func (err *conflict) Error() string {
 	return err.err.Error()
 }
 
-func (err *errConflict) Unwrap() error {
+// Unwrap returns the underlying error.
+func (err *conflict) Unwrap() error {
 	return err.err
 }
 
-func (err *errConflict) IsErrConflict() bool {
+// IsErrConflict provides type checking capability.
+// Always returns true for conflict errors.
+func (err *conflict) IsErrConflict() bool {
 	return true
 }
 
+// newErrConflict constructs a new conflict error.
 func newErrConflict(err error) error {
-	return &errConflict{
+	return &conflict{
 		err: err,
 	}
 }
 
-type errNotExist struct {
+// notExist represents an error when a resource doesn't exist.
+type notExist struct {
 	err error
 }
 
-func (err *errNotExist) Error() string {
+// Error returns the string representation of the error.
+func (err *notExist) Error() string {
 	return err.err.Error()
 }
 
-func (err *errNotExist) Unwrap() error {
+// Unwrap returns the underlying error.
+func (err *notExist) Unwrap() error {
 	return err.err
 }
 
-func (err *errNotExist) IsErrNotExist() bool {
+// IsErrNotExist provides type checking capability.
+func (err *notExist) IsErrNotExist() bool {
 	return true
 }
 
+// newErrNotExist constructs a new notExist error.
 func newErrNotExist(err error) error {
-	return &errNotExist{
+	return &notExist{
 		err: err,
 	}
 }
 
-type errDeletedURL struct {
+// deletedURL represents an error when accessing a soft-deleted URL.
+type deletedURL struct {
 	err error
 }
 
-func (err *errDeletedURL) Error() string {
+// Error returns the string representation of the error.
+func (err *deletedURL) Error() string {
 	return err.err.Error()
 }
 
-func (err *errDeletedURL) Unwrap() error {
+// Unwrap returns the underlying error.
+func (err *deletedURL) Unwrap() error {
 	return err.err
 }
 
-func (err *errDeletedURL) IsErrDeletedURL() bool {
+// IsErrDeletedURL provides type checking capability.
+func (err *deletedURL) IsErrDeletedURL() bool {
 	return true
 }
 
+// newErrDeletedURL constructs a new deletedURL error.
 func newErrDeletedURL(err error) error {
-	return &errDeletedURL{
+	return &deletedURL{
 		err: err,
 	}
 }

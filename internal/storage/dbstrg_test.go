@@ -53,7 +53,7 @@ func TestDatabaseStorage_AddURLPair(t *testing.T) {
 		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnError(pgErr)
 
 		err := strg.AddURLPair(context.Background(), &testPair)
-		assert.ErrorIs(t, err, ErrConflict)
+		assert.ErrorIs(t, err, errConflict)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -98,7 +98,7 @@ func TestDatabaseStorage_GetURLPairByShort(t *testing.T) {
 		mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
 
 		_, err := strg.GetURLPairByShort(context.Background(), testPair.Short)
-		assert.ErrorIs(t, err, ErrDeletedURL)
+		assert.ErrorIs(t, err, errDeletedURL)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
@@ -197,7 +197,7 @@ func TestDatabaseStorage_GetURLPairBatchByUserID(t *testing.T) {
 		mock.ExpectQuery(expectedQuery).WillReturnRows(sqlmock.NewRows([]string{"user_id", "short_url", "original_url"}))
 
 		_, err := strg.GetURLPairBatchByUserID(context.Background(), testUserID)
-		assert.ErrorIs(t, err, ErrNotExist)
+		assert.ErrorIs(t, err, errNotExist)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }

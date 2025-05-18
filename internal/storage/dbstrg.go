@@ -11,14 +11,17 @@ import (
 	"github.com/rycln/shorturl/internal/models"
 )
 
+// DatabaseStorage is a PostgreSQL implementation of a URL shortener storage.
 type DatabaseStorage struct {
 	db *sql.DB
 }
 
+// NewDatabaseStorage creates a new DatabaseStorage instance.
 func NewDatabaseStorage(db *sql.DB) *DatabaseStorage {
 	return &DatabaseStorage{db: db}
 }
 
+// AddURLPair stores a new URL pair in the database.
 func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -30,7 +33,7 @@ func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return newErrConflict(ErrConflict)
+			return newErrConflict(errConflict)
 		}
 		return err
 	}
@@ -38,6 +41,7 @@ func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) 
 	return tx.Commit()
 }
 
+// GetURLPairByShort retrieves a URL pair by its short URL.
 func (s *DatabaseStorage) GetURLPairByShort(ctx context.Context, short models.ShortURL) (*models.URLPair, error) {
 	row := s.db.QueryRowContext(ctx, sqlGetURLPairByShort, short)
 
@@ -52,12 +56,13 @@ func (s *DatabaseStorage) GetURLPairByShort(ctx context.Context, short models.Sh
 	}
 
 	if isDeleted {
-		return nil, newErrDeletedURL(ErrDeletedURL)
+		return nil, newErrDeletedURL(errDeletedURL)
 	}
 
 	return &pair, nil
 }
 
+// AddBatchURLPairs stores multiple URL pairs in a single transaction.
 func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.URLPair) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -75,6 +80,7 @@ func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.U
 	return tx.Commit()
 }
 
+// GetURLPairBatchByUserID retrieves all active URL pairs for a user.
 func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.UserID) ([]models.URLPair, error) {
 	rows, err := s.db.QueryContext(ctx, sqlGetURLPairBatchByUserID, uid)
 	if err != nil {
@@ -101,12 +107,13 @@ func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid model
 	}
 
 	if len(pairs) == 0 {
-		return nil, newErrNotExist(ErrNotExist)
+		return nil, newErrNotExist(errNotExist)
 	}
 
 	return pairs, nil
 }
 
+// DeleteRequestedURLs performs batch soft deletion of URLs.
 func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models.DelURLReq) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -129,6 +136,7 @@ func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*mo
 	return tx.Commit()
 }
 
+// Ping verifies database connectivity.
 func (s *DatabaseStorage) Ping(ctx context.Context) error {
 	if err := s.db.PingContext(ctx); err != nil {
 		return err
@@ -137,6 +145,7 @@ func (s *DatabaseStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close releases all database resources.
 func (s *DatabaseStorage) Close() {
 	s.db.Close()
 }

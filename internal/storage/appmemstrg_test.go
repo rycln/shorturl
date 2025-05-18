@@ -56,7 +56,7 @@ func TestAppMemStorage_AddURLPair(t *testing.T) {
 			Orig:  testOrigURL,
 		}
 		err := strg.AddURLPair(context.Background(), &pair)
-		assert.ErrorIs(t, err, ErrConflict)
+		assert.ErrorIs(t, err, errConflict)
 	})
 }
 
@@ -150,12 +150,12 @@ func TestAppMemStorage_GetURLPairByShort(t *testing.T) {
 
 	t.Run("deleted url error", func(t *testing.T) {
 		_, err := strg.GetURLPairByShort(context.Background(), testDeletedShort)
-		assert.ErrorIs(t, err, ErrDeletedURL)
+		assert.ErrorIs(t, err, errDeletedURL)
 	})
 
 	t.Run("not exist error", func(t *testing.T) {
 		_, err := strg.GetURLPairByShort(context.Background(), models.ShortURL("not exist"))
-		assert.ErrorIs(t, err, ErrNotExist)
+		assert.ErrorIs(t, err, errNotExist)
 	})
 }
 
@@ -273,7 +273,7 @@ func TestAppMemStorage_GetURLPairBatchByUserID(t *testing.T) {
 
 	t.Run("not exist error", func(t *testing.T) {
 		_, err := strg.GetURLPairBatchByUserID(context.Background(), "user id")
-		assert.ErrorIs(t, err, ErrNotExist)
+		assert.ErrorIs(t, err, errNotExist)
 	})
 }
 
