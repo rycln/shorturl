@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gordonklaus/ineffassign/pkg/ineffassign"
 	"github.com/kisielk/errcheck/errcheck"
 	"github.com/rycln/shorturl/cmd/staticlint/noexitanalyzer"
 	"golang.org/x/tools/go/analysis"
@@ -92,6 +93,7 @@ func main() {
 	// Два публичных анализатора
 	externalAnalyzers := []*analysis.Analyzer{
 		errcheck.Analyzer,
+		ineffassign.Analyzer,
 	}
 
 	// Собираем все анализаторы вместе
