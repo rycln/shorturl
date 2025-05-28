@@ -2,6 +2,7 @@ package noexitanalyzer
 
 import (
 	"go/ast"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -19,6 +20,15 @@ var Analyzer = &analysis.Analyzer{
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+
+	// Получаем путь к текущему файлу
+	file := pass.Files[0]
+	filename := pass.Fset.File(file.Pos()).Name()
+
+	// Пропускаем файлы из кэша Go
+	if strings.Contains(filename, "/go-build/") {
+		return nil, nil
+	}
 
 	nodeFilter := []ast.Node{
 		(*ast.File)(nil),
