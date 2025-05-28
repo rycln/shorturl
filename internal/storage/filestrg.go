@@ -12,10 +12,10 @@ import (
 // FileStorage is a persistent file-based implementation of a URL shortener storage.
 // It provides operations for storing and retrieving URL pairs with disk persistence.
 type FileStorage struct {
-	strgMu       sync.Mutex
-	delMu        sync.Mutex
 	strgFileName string
 	delFileName  string
+	strgMu       sync.Mutex
+	delMu        sync.Mutex
 }
 
 // NewFileStorage creates a new FileStorage instance.
@@ -42,7 +42,7 @@ func NewFileStorage(fileName string) (*FileStorage, error) {
 func (s *FileStorage) AddURLPair(ctx context.Context, pair *models.URLPair) error {
 	_, err := s.getPairByShort(ctx, pair.Short)
 	if errors.Is(err, errNotExist) {
-		err := s.writeIntoStrgFile(pair)
+		err = s.writeIntoStrgFile(pair)
 		if err != nil {
 			return err
 		}

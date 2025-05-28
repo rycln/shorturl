@@ -91,7 +91,7 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 
 	pair, err := h.apiShortenService.ShortenURL(req.Context(), uid, models.OrigURL(reqBody.URL))
 	if e, ok := err.(errAPIShortenConflict); ok && e.IsErrConflict() {
-		err := h.sendResponse(res, http.StatusConflict, string(pair.Short))
+		err = h.sendResponse(res, http.StatusConflict, string(pair.Short))
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			logger.Log.Debug("path:"+req.URL.Path, zap.Error(err))

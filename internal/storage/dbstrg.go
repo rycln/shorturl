@@ -93,7 +93,7 @@ func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid model
 	for rows.Next() {
 		var pair models.URLPair
 
-		err := rows.Scan(&pair.UID, &pair.Short, &pair.Orig)
+		err = rows.Scan(&pair.UID, &pair.Short, &pair.Orig)
 		if err != nil {
 			return nil, err
 		}

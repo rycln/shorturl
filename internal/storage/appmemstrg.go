@@ -11,9 +11,9 @@ import (
 //
 // Note: All data will be lost on application restart.
 type AppMemStorage struct {
-	mu      sync.RWMutex
 	pairs   map[models.UserID]map[models.ShortURL]models.OrigURL
 	deleted map[models.ShortURL]struct{}
+	mu      sync.RWMutex
 }
 
 // NewAppMemStorage creates a new AppMemStorage instance.
