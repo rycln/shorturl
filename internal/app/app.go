@@ -161,16 +161,24 @@ func New() (*App, error) {
 // Launches:
 // - HTTP server (blocking call)
 // - Background deletion processor
-func (app *App) Run() error {
-	defer app.storage.Close()
-	defer logger.Log.Sync()
+func (app *App) Run() (err error) {
+	defer func() {
+		if errStrgClose := app.storage.Close(); errStrgClose != nil {
+			err = fmt.Errorf("%v; storage close failed: %w", err, errStrgClose)
+		}
+	}()
+	defer func() {
+		if errLogSync := logger.Log.Sync(); errLogSync != nil {
+			err = fmt.Errorf("%v; log sync failed: %w", err, errLogSync)
+		}
+	}()
 
 	app.worker.Run(tickerPeriod, app.cfg.Timeout)
 	defer app.worker.Shutdown()
 
 	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
 
-	err := http.ListenAndServe(app.cfg.ServerAddr, app.router)
+	err = http.ListenAndServe(app.cfg.ServerAddr, app.router)
 	if err != nil {
 		return err
 	}

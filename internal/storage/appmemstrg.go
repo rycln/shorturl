@@ -169,4 +169,4 @@ func (s *AppMemStorage) Ping(context.Context) error { return nil }
 
 // Close is a no-op cleanup method for in-memory storage.
 // Exists to satisfy storage interface requirements.
-func (s *AppMemStorage) Close() {}
+func (s *AppMemStorage) Close() error { return nil }

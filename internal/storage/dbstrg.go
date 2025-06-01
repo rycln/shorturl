@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -22,12 +23,16 @@ func NewDatabaseStorage(db *sql.DB) *DatabaseStorage {
 }
 
 // AddURLPair stores a new URL pair in the database.
-func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) error {
+func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) (err error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
+		}
+	}()
 
 	_, err = tx.ExecContext(ctx, sqlAddURLPair, pair.UID, pair.Short, pair.Orig)
 	if err != nil {
@@ -63,12 +68,16 @@ func (s *DatabaseStorage) GetURLPairByShort(ctx context.Context, short models.Sh
 }
 
 // AddBatchURLPairs stores multiple URL pairs in a single transaction.
-func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.URLPair) error {
+func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.URLPair) (err error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
+		}
+	}()
 
 	for _, pair := range pairs {
 		_, err := tx.ExecContext(ctx, sqlAddURLPair, pair.UID, pair.Short, pair.Orig)
@@ -81,14 +90,16 @@ func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.U
 }
 
 // GetURLPairBatchByUserID retrieves all active URL pairs for a user.
-func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.UserID) ([]models.URLPair, error) {
+func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid models.UserID) (pairs []models.URLPair, err error) {
 	rows, err := s.db.QueryContext(ctx, sqlGetURLPairBatchByUserID, uid)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var pairs []models.URLPair
+	defer func() {
+		if rowsCloseErr := rows.Close(); rowsCloseErr != nil {
+			err = fmt.Errorf("%v; rows close failed: %w", err, rowsCloseErr)
+		}
+	}()
 
 	for rows.Next() {
 		var pair models.URLPair
@@ -114,18 +125,26 @@ func (s *DatabaseStorage) GetURLPairBatchByUserID(ctx context.Context, uid model
 }
 
 // DeleteRequestedURLs performs batch soft deletion of URLs.
-func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models.DelURLReq) error {
+func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models.DelURLReq) (err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
+		}
+	}()
 
 	stmt, err := tx.PrepareContext(ctx, sqlDeleteRequestedURLs)
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer func() {
+		if stmtCloseErr := stmt.Close(); stmtCloseErr != nil {
+			err = fmt.Errorf("%v; stmt close failed: %w", err, stmtCloseErr)
+		}
+	}()
 
 	for _, durl := range delurls {
 		if _, err := stmt.ExecContext(ctx, durl.Short); err != nil {
@@ -146,6 +165,6 @@ func (s *DatabaseStorage) Ping(ctx context.Context) error {
 }
 
 // Close releases all database resources.
-func (s *DatabaseStorage) Close() {
-	s.db.Close()
+func (s *DatabaseStorage) Close() error {
+	return s.db.Close()
 }

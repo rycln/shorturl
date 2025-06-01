@@ -117,4 +117,4 @@ func (s *FileStorage) Ping(context.Context) error { return nil }
 
 // Close is a no-op cleanup method for file storage.
 // Exists to satisfy storage interface requirements.
-func (s *FileStorage) Close() {}
+func (s *FileStorage) Close() error { return nil }
