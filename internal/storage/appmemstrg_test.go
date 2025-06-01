@@ -63,19 +63,15 @@ func TestAppMemStorage_AddURLPair(t *testing.T) {
 
 func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 	b.Run("add unique pair", func(b *testing.B) {
-		storage := NewAppMemStorage()
-
-		b.ResetTimer()
-
 		for i := 0; i < b.N; i++ {
+			storage := NewAppMemStorage()
+
 			err := storage.AddURLPair(context.Background(), &testPair)
 			require.NoError(b, err)
 		}
 	})
 
 	b.Run("add 100 unique pairs", func(b *testing.B) {
-		storage := NewAppMemStorage()
-
 		len := 100
 		pairs := make([]models.URLPair, len)
 		for i := range len {
@@ -89,6 +85,8 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
+			storage := NewAppMemStorage()
+
 			for j := range len {
 				err := storage.AddURLPair(context.Background(), &pairs[j])
 				require.NoError(b, err)
@@ -97,8 +95,6 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 	})
 
 	b.Run("add 1000 unique pairs", func(b *testing.B) {
-		storage := NewAppMemStorage()
-
 		len := 1000
 		pairs := make([]models.URLPair, len)
 		for i := range len {
@@ -112,6 +108,8 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
+			storage := NewAppMemStorage()
+
 			for j := range len {
 				err := storage.AddURLPair(context.Background(), &pairs[j])
 				require.NoError(b, err)
@@ -127,7 +125,7 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			err := storage.AddURLPair(context.Background(), &testPair)
-			require.NoError(b, err)
+			require.Error(b, err)
 		}
 	})
 }

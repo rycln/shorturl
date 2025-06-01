@@ -64,37 +64,25 @@ func TestFileStorage_AddURLPair(t *testing.T) {
 
 func BenchmarkFileStorage_AddURLPair(b *testing.B) {
 	b.Run("add unique pair", func(b *testing.B) {
-		storage, err := NewFileStorage(testFileName)
-		require.NoError(b, err)
-		defer func() {
-			err = os.Remove(storage.strgFileName)
-			require.NoError(b, err)
-		}()
-		defer func() {
-			err = os.Remove(storage.delFileName)
-			require.NoError(b, err)
-		}()
-
-		b.ResetTimer()
-
 		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			storage, err := NewFileStorage(testFileName)
+			require.NoError(b, err)
+			b.StartTimer()
+
 			err = storage.AddURLPair(context.Background(), &testPair)
 			require.NoError(b, err)
+
+			b.StopTimer()
+			err = os.Remove(storage.strgFileName)
+			require.NoError(b, err)
+			err = os.Remove(storage.delFileName)
+			require.NoError(b, err)
+			b.StartTimer()
 		}
 	})
 
 	b.Run("add 100 unique pairs", func(b *testing.B) {
-		storage, err := NewFileStorage(testFileName)
-		require.NoError(b, err)
-		defer func() {
-			err = os.Remove(storage.strgFileName)
-			require.NoError(b, err)
-		}()
-		defer func() {
-			err = os.Remove(storage.delFileName)
-			require.NoError(b, err)
-		}()
-
 		len := 100
 		pairs := make([]models.URLPair, len)
 		for i := range len {
@@ -108,25 +96,26 @@ func BenchmarkFileStorage_AddURLPair(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			storage, err := NewFileStorage(testFileName)
+			require.NoError(b, err)
+			b.StartTimer()
+
 			for j := range len {
 				err = storage.AddURLPair(context.Background(), &pairs[j])
 				require.NoError(b, err)
 			}
+
+			b.StopTimer()
+			err = os.Remove(storage.strgFileName)
+			require.NoError(b, err)
+			err = os.Remove(storage.delFileName)
+			require.NoError(b, err)
+			b.StartTimer()
 		}
 	})
 
 	b.Run("add 1000 unique pairs", func(b *testing.B) {
-		storage, err := NewFileStorage(testFileName)
-		require.NoError(b, err)
-		defer func() {
-			err = os.Remove(storage.strgFileName)
-			require.NoError(b, err)
-		}()
-		defer func() {
-			err = os.Remove(storage.delFileName)
-			require.NoError(b, err)
-		}()
-
 		len := 1000
 		pairs := make([]models.URLPair, len)
 		for i := range len {
@@ -140,10 +129,22 @@ func BenchmarkFileStorage_AddURLPair(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			storage, err := NewFileStorage(testFileName)
+			require.NoError(b, err)
+			b.StartTimer()
+
 			for j := range len {
 				err = storage.AddURLPair(context.Background(), &pairs[j])
 				require.NoError(b, err)
 			}
+
+			b.StopTimer()
+			err = os.Remove(storage.strgFileName)
+			require.NoError(b, err)
+			err = os.Remove(storage.delFileName)
+			require.NoError(b, err)
+			b.StartTimer()
 		}
 	})
 
@@ -165,7 +166,7 @@ func BenchmarkFileStorage_AddURLPair(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			err = storage.AddURLPair(context.Background(), &testPair)
-			require.NoError(b, err)
+			require.Error(b, err)
 		}
 	})
 }
@@ -486,7 +487,7 @@ func BenchmarkFileStorage_GetURLPairBatchByUserID(b *testing.B) {
 		pairs := make([]models.URLPair, len)
 		for i := range len {
 			pairs[i] = models.URLPair{
-				UID:   models.UserID(fmt.Sprintf("user-%d", i)),
+				UID:   testUserID,
 				Orig:  models.OrigURL(fmt.Sprintf("https://site.com/page%d", i)),
 				Short: models.ShortURL(fmt.Sprintf("hash-%d", i)),
 			}
@@ -531,7 +532,7 @@ func BenchmarkFileStorage_GetURLPairBatchByUserID(b *testing.B) {
 		pairs := make([]models.URLPair, len)
 		for i := range len {
 			pairs[i] = models.URLPair{
-				UID:   models.UserID(fmt.Sprintf("user-%d", i)),
+				UID:   testUserID,
 				Orig:  models.OrigURL(fmt.Sprintf("https://site.com/page%d", i)),
 				Short: models.ShortURL(fmt.Sprintf("hash-%d", i)),
 			}
