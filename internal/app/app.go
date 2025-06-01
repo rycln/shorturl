@@ -21,6 +21,13 @@ import (
 	"github.com/rycln/shorturl/internal/worker"
 )
 
+// buildInfo holds application build metadata that can be set during compilation.
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 // Package-level constants defining core application parameters.
 const (
 	// lengthOfShortURL defines the character length of generated short URLs.
@@ -177,10 +184,28 @@ func (app *App) Run() (err error) {
 	defer app.worker.Shutdown()
 
 	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
+	printBuildInfo()
 
 	err = http.ListenAndServe(app.cfg.ServerAddr, app.router)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// printBuildInfo displays the build metadata in a standardized format.
+func printBuildInfo() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }
