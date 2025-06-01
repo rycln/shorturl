@@ -7,6 +7,7 @@ import (
 
 	"github.com/rycln/shorturl/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAppMemStorage_AddURLPair(t *testing.T) {
@@ -67,7 +68,8 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.AddURLPair(context.Background(), &testPair)
+			err := storage.AddURLPair(context.Background(), &testPair)
+			require.NoError(b, err)
 		}
 	})
 
@@ -88,7 +90,8 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			for j := range len {
-				storage.AddURLPair(context.Background(), &pairs[j])
+				err := storage.AddURLPair(context.Background(), &pairs[j])
+				require.NoError(b, err)
 			}
 		}
 	})
@@ -110,18 +113,21 @@ func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			for j := range len {
-				storage.AddURLPair(context.Background(), &pairs[j])
+				err := storage.AddURLPair(context.Background(), &pairs[j])
+				require.NoError(b, err)
 			}
 		}
 	})
 
 	b.Run("add duplicate pair", func(b *testing.B) {
 		storage := NewAppMemStorage()
-		storage.AddURLPair(context.Background(), &testPair)
+		err := storage.AddURLPair(context.Background(), &testPair)
+		require.NoError(b, err)
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.AddURLPair(context.Background(), &testPair)
+			err := storage.AddURLPair(context.Background(), &testPair)
+			require.NoError(b, err)
 		}
 	})
 }
@@ -166,7 +172,8 @@ func BenchmarkAppMemStorage_GetURLPairByShort(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.GetURLPairByShort(context.Background(), testShortURL)
+			_, err := storage.GetURLPairByShort(context.Background(), testShortURL)
+			require.NoError(b, err)
 		}
 	})
 }
@@ -209,7 +216,8 @@ func BenchmarkAppMemStorage_AddBatchURLPairs(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.AddBatchURLPairs(context.Background(), pair)
+			err := storage.AddBatchURLPairs(context.Background(), pair)
+			require.NoError(b, err)
 		}
 	})
 
@@ -227,7 +235,8 @@ func BenchmarkAppMemStorage_AddBatchURLPairs(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.AddBatchURLPairs(context.Background(), pairs)
+			err := storage.AddBatchURLPairs(context.Background(), pairs)
+			require.NoError(b, err)
 		}
 	})
 
@@ -245,7 +254,8 @@ func BenchmarkAppMemStorage_AddBatchURLPairs(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.AddBatchURLPairs(context.Background(), pairs)
+			err := storage.AddBatchURLPairs(context.Background(), pairs)
+			require.NoError(b, err)
 		}
 	})
 }
@@ -286,7 +296,8 @@ func BenchmarkAppMemStorage_GetURLPairBatchByUserID(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.GetURLPairBatchByUserID(context.Background(), testUserID)
+			_, err := storage.GetURLPairBatchByUserID(context.Background(), testUserID)
+			require.NoError(b, err)
 		}
 	})
 
@@ -300,7 +311,8 @@ func BenchmarkAppMemStorage_GetURLPairBatchByUserID(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.GetURLPairBatchByUserID(context.Background(), testUserID)
+			_, err := storage.GetURLPairBatchByUserID(context.Background(), testUserID)
+			require.NoError(b, err)
 		}
 	})
 
@@ -314,7 +326,8 @@ func BenchmarkAppMemStorage_GetURLPairBatchByUserID(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.GetURLPairBatchByUserID(context.Background(), testUserID)
+			_, err := storage.GetURLPairBatchByUserID(context.Background(), testUserID)
+			require.NoError(b, err)
 		}
 	})
 }
@@ -354,7 +367,8 @@ func BenchmarkAppMemStorage_DeleteRequestedURLs(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.DeleteRequestedURLs(context.Background(), delURLs)
+			err := storage.DeleteRequestedURLs(context.Background(), delURLs)
+			require.NoError(b, err)
 		}
 	})
 
@@ -373,7 +387,8 @@ func BenchmarkAppMemStorage_DeleteRequestedURLs(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.DeleteRequestedURLs(context.Background(), delURLs)
+			err := storage.DeleteRequestedURLs(context.Background(), delURLs)
+			require.NoError(b, err)
 		}
 	})
 
@@ -392,7 +407,8 @@ func BenchmarkAppMemStorage_DeleteRequestedURLs(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.DeleteRequestedURLs(context.Background(), delURLs)
+			err := storage.DeleteRequestedURLs(context.Background(), delURLs)
+			require.NoError(b, err)
 		}
 	})
 }
@@ -412,7 +428,8 @@ func BenchmarkAppMemStorage_Ping(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			storage.Ping(context.Background())
+			err := storage.Ping(context.Background())
+			require.NoError(b, err)
 		}
 	})
 }

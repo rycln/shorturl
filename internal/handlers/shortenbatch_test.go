@@ -55,7 +55,10 @@ func TestShortenBatchHandler_ServeHTTP(t *testing.T) {
 		shortenBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusCreated, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -78,7 +81,10 @@ func TestShortenBatchHandler_ServeHTTP(t *testing.T) {
 		shortenBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
@@ -92,7 +98,10 @@ func TestShortenBatchHandler_ServeHTTP(t *testing.T) {
 		shortenBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 	})
@@ -109,7 +118,10 @@ func TestShortenBatchHandler_ServeHTTP(t *testing.T) {
 		shortenBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

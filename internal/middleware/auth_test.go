@@ -34,7 +34,8 @@ func TestAuthMiddleware_JWT(t *testing.T) {
 		uid, ok := r.Context().Value(contextkeys.UserID).(models.UserID)
 		require.True(t, ok)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(uid))
+		_, err := w.Write([]byte(uid))
+		require.NoError(t, err)
 	})
 
 	t.Run("valid test", func(t *testing.T) {
@@ -47,7 +48,10 @@ func TestAuthMiddleware_JWT(t *testing.T) {
 		auth.JWT(testHandler).ServeHTTP(w, request)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -64,7 +68,10 @@ func TestAuthMiddleware_JWT(t *testing.T) {
 		auth.JWT(testHandler).ServeHTTP(w, request)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -84,7 +91,10 @@ func TestAuthMiddleware_JWT(t *testing.T) {
 		auth.JWT(testHandler).ServeHTTP(w, request)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -102,7 +112,10 @@ func TestAuthMiddleware_JWT(t *testing.T) {
 		auth.JWT(testHandler).ServeHTTP(w, request)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

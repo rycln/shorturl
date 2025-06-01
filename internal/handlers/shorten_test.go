@@ -11,6 +11,7 @@ import (
 	"github.com/rycln/shorturl/internal/handlers/mocks"
 	"github.com/rycln/shorturl/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestShortenHandler_ServeHTTP(t *testing.T) {
@@ -32,7 +33,10 @@ func TestShortenHandler_ServeHTTP(t *testing.T) {
 		shortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusCreated, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -51,7 +55,10 @@ func TestShortenHandler_ServeHTTP(t *testing.T) {
 		shortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
@@ -65,7 +72,10 @@ func TestShortenHandler_ServeHTTP(t *testing.T) {
 		shortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 	})
@@ -82,7 +92,10 @@ func TestShortenHandler_ServeHTTP(t *testing.T) {
 		shortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusConflict, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -101,7 +114,10 @@ func TestShortenHandler_ServeHTTP(t *testing.T) {
 		shortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
