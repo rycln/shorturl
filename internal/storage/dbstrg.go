@@ -29,7 +29,7 @@ func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) 
 		return err
 	}
 	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
 			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
 		}
 	}()
@@ -74,7 +74,7 @@ func (s *DatabaseStorage) AddBatchURLPairs(ctx context.Context, pairs []models.U
 		return err
 	}
 	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
 			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
 		}
 	}()
@@ -131,7 +131,7 @@ func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*mo
 		return err
 	}
 	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
 			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
 		}
 	}()
