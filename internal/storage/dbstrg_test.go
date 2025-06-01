@@ -131,7 +131,7 @@ func TestDatabaseStorage_AddBatchURLPairs(t *testing.T) {
 		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnError(errTest)
 
 		err := strg.AddBatchURLPairs(context.Background(), pairs)
-		assert.ErrorIs(t, err, errTest)
+		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 

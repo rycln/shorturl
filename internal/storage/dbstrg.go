@@ -29,7 +29,7 @@ func (s *DatabaseStorage) AddURLPair(ctx context.Context, pair *models.URLPair) 
 		return err
 	}
 	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) && !errors.Is(err, errConflict) {
 			err = fmt.Errorf("%v; rollback failed: %w", err, rollbackErr)
 		}
 	}()
