@@ -66,6 +66,10 @@ jobs:
           go install github.com/pressly/goose/v3/cmd/goose@v3.24.1
           go run ./cmd/migrator -d='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
 
+      - name: Run staticlint
+        run: |
+          go run ./cmd/staticlint ./...
+
       - name: "Code increment #1"
         if: |
           github.ref == 'refs/heads/main' ||
