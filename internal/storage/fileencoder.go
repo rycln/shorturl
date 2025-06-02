@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/rycln/shorturl/internal/models"
@@ -28,7 +29,7 @@ func (f *fileEncoder) close() error {
 	return f.file.Close()
 }
 
-func (s *FileStorage) writeIntoStrgFile(pair *models.URLPair) error {
+func (s *FileStorage) writeIntoStrgFile(pair *models.URLPair) (err error) {
 	s.strgMu.Lock()
 	defer s.strgMu.Unlock()
 
@@ -36,12 +37,16 @@ func (s *FileStorage) writeIntoStrgFile(pair *models.URLPair) error {
 	if err != nil {
 		return err
 	}
-	defer enc.close()
+	defer func() {
+		if encCloseErr := enc.close(); encCloseErr != nil {
+			err = fmt.Errorf("%v; encoder close failed: %w", err, encCloseErr)
+		}
+	}()
 
 	return enc.Encode(pair)
 }
 
-func (s *FileStorage) writeIntoDelFile(delReq *models.DelURLReq) error {
+func (s *FileStorage) writeIntoDelFile(delReq *models.DelURLReq) (err error) {
 	s.delMu.Lock()
 	defer s.delMu.Unlock()
 
@@ -49,7 +54,11 @@ func (s *FileStorage) writeIntoDelFile(delReq *models.DelURLReq) error {
 	if err != nil {
 		return err
 	}
-	defer enc.close()
+	defer func() {
+		if encCloseErr := enc.close(); encCloseErr != nil {
+			err = fmt.Errorf("%v; encoder close failed: %w", err, encCloseErr)
+		}
+	}()
 
 	return enc.Encode(delReq)
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -44,7 +45,12 @@ func main() {
 	}
 	// выводим код ответа
 	fmt.Println("Статус-код ", response.Status)
-	defer response.Body.Close()
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			log.Printf("failed to close body: %v", err)
+		}
+	}()
 	// читаем поток из тела ответа
 	body, err := io.ReadAll(response.Body)
 	if err != nil {

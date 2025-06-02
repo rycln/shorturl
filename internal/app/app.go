@@ -21,6 +21,13 @@ import (
 	"github.com/rycln/shorturl/internal/worker"
 )
 
+// buildInfo holds application build metadata that can be set during compilation.
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 // Package-level constants defining core application parameters.
 const (
 	// lengthOfShortURL defines the character length of generated short URLs.
@@ -161,18 +168,44 @@ func New() (*App, error) {
 // Launches:
 // - HTTP server (blocking call)
 // - Background deletion processor
-func (app *App) Run() error {
-	defer app.storage.Close()
-	defer logger.Log.Sync()
+func (app *App) Run() (err error) {
+	defer func() {
+		if errStrgClose := app.storage.Close(); errStrgClose != nil {
+			err = fmt.Errorf("%v; storage close failed: %w", err, errStrgClose)
+		}
+	}()
+	defer func() {
+		if errLogSync := logger.Log.Sync(); errLogSync != nil {
+			err = fmt.Errorf("%v; log sync failed: %w", err, errLogSync)
+		}
+	}()
 
 	app.worker.Run(tickerPeriod, app.cfg.Timeout)
 	defer app.worker.Shutdown()
 
 	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
+	printBuildInfo()
 
-	err := http.ListenAndServe(app.cfg.ServerAddr, app.router)
+	err = http.ListenAndServe(app.cfg.ServerAddr, app.router)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// printBuildInfo displays the build metadata in a standardized format.
+func printBuildInfo() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }

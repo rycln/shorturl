@@ -43,7 +43,10 @@ func TestRetrieveBatchHandler_ServeHTTP(t *testing.T) {
 		retrieveBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -63,7 +66,10 @@ func TestRetrieveBatchHandler_ServeHTTP(t *testing.T) {
 		retrieveBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
@@ -79,7 +85,10 @@ func TestRetrieveBatchHandler_ServeHTTP(t *testing.T) {
 		retrieveBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusNoContent, res.StatusCode)
 	})
@@ -93,7 +102,10 @@ func TestRetrieveBatchHandler_ServeHTTP(t *testing.T) {
 		retrieveBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

@@ -9,6 +9,7 @@ import (
 	"github.com/rycln/shorturl/internal/handlers/mocks"
 	"github.com/rycln/shorturl/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRetrieveHandler_ServeHTTP(t *testing.T) {
@@ -28,7 +29,10 @@ func TestRetrieveHandler_ServeHTTP(t *testing.T) {
 		retrieveHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusTemporaryRedirect, res.StatusCode)
 		assert.Equal(t, res.Header.Get("Location"), string(testOrigURL))
@@ -42,7 +46,10 @@ func TestRetrieveHandler_ServeHTTP(t *testing.T) {
 		retrieveHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
@@ -58,7 +65,10 @@ func TestRetrieveHandler_ServeHTTP(t *testing.T) {
 		retrieveHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusGone, res.StatusCode)
 	})
@@ -72,7 +82,10 @@ func TestRetrieveHandler_ServeHTTP(t *testing.T) {
 		retrieveHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

@@ -5,6 +5,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/rycln/shorturl/internal/logger"
+	"go.uber.org/zap"
 )
 
 // compressWriter wraps http.ResponseWriter to provide gzip compression.
@@ -100,7 +103,12 @@ func Compress(h http.Handler) http.Handler {
 		if supportsGzip {
 			cw := newCompressWriter(w)
 			ow = cw
-			defer cw.Close()
+			defer func() {
+				err := cw.Close()
+				if err != nil {
+					logger.Log.Debug("compress middleware writer close error", zap.Error(err))
+				}
+			}()
 		}
 
 		contentEncoding := r.Header.Get("Content-Encoding")
@@ -109,10 +117,16 @@ func Compress(h http.Handler) http.Handler {
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
+				logger.Log.Debug("compress middleware", zap.Error(err))
 				return
 			}
 			r.Body = cr
-			defer cr.Close()
+			defer func() {
+				err = cr.Close()
+				if err != nil {
+					logger.Log.Debug("compress middleware reader close error", zap.Error(err))
+				}
+			}()
 		}
 
 		h.ServeHTTP(ow, r)

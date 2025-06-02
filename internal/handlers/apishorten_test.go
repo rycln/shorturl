@@ -40,7 +40,10 @@ func TestAPIShortenHandler_HandleHTTP(t *testing.T) {
 		apiShortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusCreated, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -68,7 +71,10 @@ func TestAPIShortenHandler_HandleHTTP(t *testing.T) {
 		apiShortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
@@ -82,7 +88,10 @@ func TestAPIShortenHandler_HandleHTTP(t *testing.T) {
 		apiShortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 	})
@@ -101,7 +110,10 @@ func TestAPIShortenHandler_HandleHTTP(t *testing.T) {
 		apiShortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 	})
@@ -123,7 +135,10 @@ func TestAPIShortenHandler_HandleHTTP(t *testing.T) {
 		apiShortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusConflict, res.StatusCode)
 		resBody, err := io.ReadAll(res.Body)
@@ -152,7 +167,10 @@ func TestAPIShortenHandler_HandleHTTP(t *testing.T) {
 		apiShortenHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

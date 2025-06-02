@@ -97,5 +97,10 @@ func (h *ShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (h *ShortenHandler) sendResponse(res http.ResponseWriter, code int, shortURL string) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(code)
-	res.Write([]byte(h.baseAddr + "/" + shortURL))
+	_, err := res.Write([]byte(h.baseAddr + "/" + shortURL))
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		logger.Log.Debug("shorten response write error", zap.Error(err))
+		return
+	}
 }

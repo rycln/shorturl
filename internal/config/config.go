@@ -41,9 +41,6 @@ type Cfg struct {
 	// DatabaseDsn specifies database connection string
 	DatabaseDsn string `env:"DATABASE_DSN"`
 
-	// Timeout defines default network operation timeout
-	Timeout time.Duration `env:"TIMEOUT_DUR"`
-
 	// Key contains JWT signing key (min 32 bytes recommended)
 	Key string `env:"JWT_KEY"`
 
@@ -52,6 +49,9 @@ type Cfg struct {
 
 	// StorageType is derived from other parameters (memory|file|db)
 	StorageType string `env:"-"`
+
+	// Timeout defines default network operation timeout
+	Timeout time.Duration `env:"TIMEOUT_DUR"`
 }
 
 // ConfigBuilder implements builder pattern for Cfg.

@@ -8,6 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/rycln/shorturl/internal/handlers/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPingHandler_ServeHTTP(t *testing.T) {
@@ -27,7 +28,10 @@ func TestPingHandler_ServeHTTP(t *testing.T) {
 		pingHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 	})
@@ -41,7 +45,10 @@ func TestPingHandler_ServeHTTP(t *testing.T) {
 		pingHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

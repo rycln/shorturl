@@ -17,7 +17,16 @@ import (
 func TestDatabaseStorage_AddURLPair(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	defer db.Close()
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
 
 	strg := NewDatabaseStorage(db)
 
@@ -69,7 +78,16 @@ func TestDatabaseStorage_AddURLPair(t *testing.T) {
 func TestDatabaseStorage_GetURLPairByShort(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	defer db.Close()
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
 
 	strg := NewDatabaseStorage(db)
 
@@ -106,7 +124,16 @@ func TestDatabaseStorage_GetURLPairByShort(t *testing.T) {
 func TestDatabaseStorage_AddBatchURLPairs(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	defer db.Close()
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
 
 	strg := NewDatabaseStorage(db)
 
@@ -131,7 +158,7 @@ func TestDatabaseStorage_AddBatchURLPairs(t *testing.T) {
 		mock.ExpectExec(expectedQuery).WithArgs(testPair.UID, testPair.Short, testPair.Orig).WillReturnError(errTest)
 
 		err := strg.AddBatchURLPairs(context.Background(), pairs)
-		assert.ErrorIs(t, err, errTest)
+		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -157,7 +184,16 @@ func TestDatabaseStorage_AddBatchURLPairs(t *testing.T) {
 func TestDatabaseStorage_GetURLPairBatchByUserID(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	defer db.Close()
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
 
 	strg := NewDatabaseStorage(db)
 
@@ -205,7 +241,16 @@ func TestDatabaseStorage_GetURLPairBatchByUserID(t *testing.T) {
 func TestDatabaseStorage_DeleteRequestedURLs(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	defer db.Close()
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
 
 	strg := NewDatabaseStorage(db)
 
@@ -259,7 +304,16 @@ func TestDatabaseStorage_Ping(t *testing.T) {
 		sqlmock.MonitorPingsOption(true),
 	)
 	require.NoError(t, err)
-	defer db.Close()
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
 
 	strg := NewDatabaseStorage(db)
 

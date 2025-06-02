@@ -40,7 +40,10 @@ func TestDeleteBatchHandler_ServeHTTP(t *testing.T) {
 		delBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusAccepted, res.StatusCode)
 	})
@@ -56,7 +59,10 @@ func TestDeleteBatchHandler_ServeHTTP(t *testing.T) {
 		delBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})
@@ -70,7 +76,10 @@ func TestDeleteBatchHandler_ServeHTTP(t *testing.T) {
 		delBatchHandler.ServeHTTP(w, req)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			require.NoError(t, err)
+		}()
 
 		assert.Equal(t, http.StatusInternalServerError, res.StatusCode)
 	})

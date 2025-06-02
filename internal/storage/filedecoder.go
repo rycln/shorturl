@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
@@ -30,7 +31,7 @@ func (f *fileDecoder) close() error {
 	return f.file.Close()
 }
 
-func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL) (*models.URLPair, error) {
+func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL) (pair *models.URLPair, err error) {
 	s.strgMu.Lock()
 	defer s.strgMu.Unlock()
 
@@ -38,7 +39,11 @@ func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL)
 	if err != nil {
 		return nil, err
 	}
-	defer fd.close()
+	defer func() {
+		if decCloseErr := fd.close(); decCloseErr != nil {
+			err = fmt.Errorf("%v; decoder close failed: %w", err, decCloseErr)
+		}
+	}()
 
 	for {
 		select {
@@ -47,8 +52,8 @@ func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL)
 		default:
 		}
 
-		pair := &models.URLPair{}
-		err := fd.Decode(pair)
+		pair = &models.URLPair{}
+		err = fd.Decode(pair)
 		if err == io.EOF {
 			return nil, errNotExist
 		}
@@ -62,7 +67,7 @@ func (s *FileStorage) getPairByShort(ctx context.Context, short models.ShortURL)
 	}
 }
 
-func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([]models.URLPair, error) {
+func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) (userpairs []models.URLPair, err error) {
 	s.strgMu.Lock()
 	defer s.strgMu.Unlock()
 
@@ -70,9 +75,11 @@ func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([
 	if err != nil {
 		return nil, err
 	}
-	defer fd.close()
-
-	var userpairs []models.URLPair
+	defer func() {
+		if decCloseErr := fd.close(); decCloseErr != nil {
+			err = fmt.Errorf("%v; decoder close failed: %w", err, decCloseErr)
+		}
+	}()
 
 	for {
 		select {
@@ -82,7 +89,7 @@ func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([
 		}
 
 		pair := &models.URLPair{}
-		err := fd.Decode(pair)
+		err = fd.Decode(pair)
 		if err == io.EOF {
 			if userpairs == nil {
 				return nil, errNotExist
@@ -99,7 +106,7 @@ func (s *FileStorage) getAllUserPairs(ctx context.Context, uid models.UserID) ([
 	}
 }
 
-func (s *FileStorage) shortIsDeleted(ctx context.Context, short models.ShortURL) (bool, error) {
+func (s *FileStorage) shortIsDeleted(ctx context.Context, short models.ShortURL) (isDeleted bool, err error) {
 	s.delMu.Lock()
 	defer s.delMu.Unlock()
 
@@ -107,7 +114,11 @@ func (s *FileStorage) shortIsDeleted(ctx context.Context, short models.ShortURL)
 	if err != nil {
 		return false, err
 	}
-	defer fd.close()
+	defer func() {
+		if decCloseErr := fd.close(); decCloseErr != nil {
+			err = fmt.Errorf("%v; decoder close failed: %w", err, decCloseErr)
+		}
+	}()
 
 	for {
 		select {
@@ -117,7 +128,7 @@ func (s *FileStorage) shortIsDeleted(ctx context.Context, short models.ShortURL)
 		}
 
 		deleted := &models.DelURLReq{}
-		err := fd.Decode(deleted)
+		err = fd.Decode(deleted)
 		if err == io.EOF {
 			return false, nil
 		}

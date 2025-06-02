@@ -14,7 +14,7 @@ type Storage interface {
 	service.BatchShortenerStorage
 	service.PingStorage
 	service.BatchDeleterStorage
-	Close()
+	Close() error
 }
 
 // Factory creates a concrete Storage implementation based on the provided type.

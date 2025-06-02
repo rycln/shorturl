@@ -11,9 +11,9 @@ import (
 //
 // Note: All data will be lost on application restart.
 type AppMemStorage struct {
-	mu      sync.RWMutex
 	pairs   map[models.UserID]map[models.ShortURL]models.OrigURL
 	deleted map[models.ShortURL]struct{}
+	mu      sync.RWMutex
 }
 
 // NewAppMemStorage creates a new AppMemStorage instance.
@@ -169,4 +169,4 @@ func (s *AppMemStorage) Ping(context.Context) error { return nil }
 
 // Close is a no-op cleanup method for in-memory storage.
 // Exists to satisfy storage interface requirements.
-func (s *AppMemStorage) Close() {}
+func (s *AppMemStorage) Close() error { return nil }
