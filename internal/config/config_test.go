@@ -28,6 +28,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
 		StorageType:     "db",
+		EnableHTTPS:     true,
 	}
 
 	t.Setenv("SERVER_ADDRESS", testCfg.ServerAddr)
@@ -37,6 +38,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 	t.Setenv("TIMEOUT_DUR", testCfg.Timeout.String())
 	t.Setenv("JWT_KEY", testCfg.Key)
 	t.Setenv("LOG_LEVEL", testCfg.LogLevel)
+	t.Setenv("ENABLE_HTTPS", "true")
 
 	t.Run("valid test", func(t *testing.T) {
 		cfg, err := NewConfigBuilder().
@@ -72,6 +74,7 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
 		StorageType:     "db",
+		EnableHTTPS:     true,
 	}
 
 	t.Run("valid test", func(t *testing.T) {
@@ -84,6 +87,7 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 			"-t=" + testCfg.Timeout.String(),
 			"-k=" + testCfg.Key,
 			"-l=" + testCfg.LogLevel,
+			"-s",
 		}
 
 		cfg, err := NewConfigBuilder().

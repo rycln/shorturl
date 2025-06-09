@@ -52,6 +52,9 @@ type Cfg struct {
 
 	// Timeout defines default network operation timeout
 	Timeout time.Duration `env:"TIMEOUT_DUR"`
+
+	//HTTPS flag
+	EnableHTTPS bool `env:"ENABLE_HTTPS"`
 }
 
 // ConfigBuilder implements builder pattern for Cfg.
@@ -86,6 +89,7 @@ func (b *ConfigBuilder) WithFlagParsing() *ConfigBuilder {
 	flag.DurationVar(&b.cfg.Timeout, "t", b.cfg.Timeout, "Timeout duration in seconds")
 	flag.StringVar(&b.cfg.Key, "k", b.cfg.Key, "Key for jwt autorization")
 	flag.StringVar(&b.cfg.LogLevel, "l", b.cfg.LogLevel, "Logger level")
+	flag.BoolVar(&b.cfg.EnableHTTPS, "s", b.cfg.EnableHTTPS, "Enable HTTPS flag")
 	flag.Parse()
 
 	return b
