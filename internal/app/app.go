@@ -186,10 +186,18 @@ func (app *App) Run() (err error) {
 	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
 	printBuildInfo()
 
-	err = http.ListenAndServe(app.cfg.ServerAddr, app.router)
-	if err != nil {
-		return err
+	if app.cfg.EnableHTTPS {
+		err = http.ListenAndServeTLS(app.cfg.ServerAddr, "cert.pem", "key.pem", app.router)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = http.ListenAndServe(app.cfg.ServerAddr, app.router)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
