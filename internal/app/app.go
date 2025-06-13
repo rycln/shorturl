@@ -4,9 +4,15 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/pprof"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
 	chimiddleware "github.com/go-chi/chi/middleware"
@@ -39,12 +45,15 @@ const (
 
 	// tickerPeriod specifies the interval for batch operations processing.
 	tickerPeriod = time.Duration(10) * time.Second
+
+	// shutdownTimeout defines timeout for graceful shutdown
+	shutdownTimeout = 5 * time.Second
 )
 
 // App represents the core application layer.
 //
 // The struct combines all main components and manages their lifecycle:
-// - HTTP router (chi)
+// - HTTP server
 // - Background workers
 // - Configuration
 // - Storage
@@ -52,7 +61,7 @@ const (
 // Should be created once during application startup using New()
 // and managed as a single unit.
 type App struct {
-	router  *chi.Mux
+	server  *http.Server
 	storage storage.Storage
 	worker  *worker.DeletionProcessor
 	cfg     *config.Cfg
@@ -156,8 +165,13 @@ func New() (*App, error) {
 		r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 	})
 
+	s := &http.Server{
+		Addr:    cfg.ServerAddr,
+		Handler: r,
+	}
+
 	return &App{
-		router:  r,
+		server:  s,
 		storage: strg,
 		worker:  worker,
 		cfg:     cfg,
@@ -169,34 +183,72 @@ func New() (*App, error) {
 // Launches:
 // - HTTP server (blocking call)
 // - Background deletion processor
-func (app *App) Run() (err error) {
-	defer func() {
-		if errStrgClose := app.storage.Close(); errStrgClose != nil {
-			err = fmt.Errorf("%v; storage close failed: %w", err, errStrgClose)
-		}
-	}()
-	defer func() {
-		if errLogSync := logger.Log.Sync(); errLogSync != nil {
-			err = fmt.Errorf("%v; log sync failed: %w", err, errLogSync)
-		}
-	}()
+func (app *App) Run() error {
+	doneCh := app.worker.Run(tickerPeriod, app.cfg.Timeout)
 
-	app.worker.Run(tickerPeriod, app.cfg.Timeout)
-	defer app.worker.Shutdown()
+	go func() {
+		if app.cfg.EnableHTTPS {
+			err := app.server.ListenAndServeTLS("cert.pem", "key.pem")
+			if err != nil && err != http.ErrServerClosed {
+				log.Fatalf("Server error: %v", err)
+			}
+		} else {
+			err := app.server.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				log.Fatalf("Server error: %v", err)
+			}
+		}
+	}()
 
 	logger.Log.Info(fmt.Sprintf("Server started successfully! Address: %s Storage Type: %s", app.cfg.ServerAddr, app.cfg.StorageType))
 	printBuildInfo()
 
-	if app.cfg.EnableHTTPS {
-		err = http.ListenAndServeTLS(app.cfg.ServerAddr, "cert.pem", "key.pem", app.router)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = http.ListenAndServe(app.cfg.ServerAddr, app.router)
-		if err != nil {
-			return err
-		}
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	<-shutdown
+
+	app.worker.Shutdown()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	err := app.shutdown(shutdownCtx, doneCh)
+	if err != nil {
+		return fmt.Errorf("shutdown error: %v", err)
+	}
+
+	err = app.cleanup()
+	if err != nil {
+		return fmt.Errorf("cleanup error: %v", err)
+	}
+
+	log.Println(strings.TrimPrefix(os.Args[0], "./") + " shutted down gracefully")
+
+	return nil
+}
+
+func (app *App) shutdown(ctx context.Context, doneCh <-chan struct{}) error {
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("worker shutdown timeout: %w", ctx.Err())
+	case <-doneCh:
+	}
+
+	if err := app.server.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (app *App) cleanup() error {
+	if err := app.storage.Close(); err != nil {
+		return fmt.Errorf("storage close failed: %w", err)
+	}
+
+	if err := logger.Log.Sync(); err != nil && !errors.Is(err, syscall.EINVAL) {
+		return fmt.Errorf("log sync failed: %w", err)
 	}
 
 	return nil
