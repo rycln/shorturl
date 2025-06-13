@@ -22,8 +22,8 @@ const (
 	defaultLogLevel   = "debug"
 )
 
+// CfgFile specifies configuration file name
 type CfgFile struct {
-	// CfgFileName specifies configuration file name
 	CfgFileName string `env:"CONFIG"`
 }
 
