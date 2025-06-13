@@ -208,8 +208,6 @@ func (app *App) Run() error {
 
 	<-shutdown
 
-	app.worker.Shutdown()
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
@@ -229,14 +227,16 @@ func (app *App) Run() error {
 }
 
 func (app *App) shutdown(ctx context.Context, doneCh <-chan struct{}) error {
+	if err := app.server.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	app.worker.Shutdown()
+
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("worker shutdown timeout: %w", ctx.Err())
 	case <-doneCh:
-	}
-
-	if err := app.server.Shutdown(ctx); err != nil {
-		return err
 	}
 
 	return nil
