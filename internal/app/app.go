@@ -226,6 +226,11 @@ func (app *App) Run() error {
 	return nil
 }
 
+// shutdown gracefully shuts down the application components.
+// It performs the following steps in order:
+//  1. Shuts down the HTTP server with the given context
+//  2. Shuts down the worker component
+//  3. Waits for either worker completion (doneCh) or context timeout
 func (app *App) shutdown(ctx context.Context, doneCh <-chan struct{}) error {
 	if err := app.server.Shutdown(ctx); err != nil {
 		return err
@@ -242,6 +247,10 @@ func (app *App) shutdown(ctx context.Context, doneCh <-chan struct{}) error {
 	return nil
 }
 
+// cleanup performs resource cleanup operations for the application.
+// It handles:
+//   - Closing storage connections
+//   - Syncing logger buffers (ignoring EINVAL errors for non-buffered logger)
 func (app *App) cleanup() error {
 	if err := app.storage.Close(); err != nil {
 		return fmt.Errorf("storage close failed: %w", err)
