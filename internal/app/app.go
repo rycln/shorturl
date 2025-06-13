@@ -69,6 +69,7 @@ type App struct {
 // Returns error if any component fails to initialize.
 func New() (*App, error) {
 	cfg, err := config.NewConfigBuilder().
+		WithConfigFile().
 		WithFlagParsing().
 		WithEnvParsing().
 		WithDefaultJWTKey().
