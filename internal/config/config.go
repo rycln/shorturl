@@ -3,8 +3,11 @@ package config
 
 import (
 	"crypto/rand"
-	"flag"
+	"encoding/json"
+	"os"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/rycln/shorturl/internal/logger"
@@ -19,6 +22,11 @@ const (
 	defaultLogLevel   = "debug"
 )
 
+// CfgFile specifies configuration file name
+type CfgFile struct {
+	CfgFileName string `env:"CONFIG"`
+}
+
 // Cfg contains all application configuration parameters.
 //
 // The structure supports loading from multiple sources:
@@ -30,28 +38,31 @@ const (
 // StorageType is excluded from env vars as it's derived internally.
 type Cfg struct {
 	// ServerAddr specifies HTTP server listen address (host:port)
-	ServerAddr string `env:"SERVER_ADDRESS"`
+	ServerAddr string `json:"server_address" env:"SERVER_ADDRESS"`
 
 	// ShortBaseAddr is the base URL for shortened links (e.g. "https://sh.rt")
-	ShortBaseAddr string `env:"BASE_URL"`
+	ShortBaseAddr string `json:"base_url" env:"BASE_URL"`
 
 	// StorageFilePath contains path for file-based storage
-	StorageFilePath string `env:"FILE_STORAGE_PATH"`
+	StorageFilePath string `json:"file_storage_path" env:"FILE_STORAGE_PATH"`
 
 	// DatabaseDsn specifies database connection string
-	DatabaseDsn string `env:"DATABASE_DSN"`
+	DatabaseDsn string `json:"database_dsn" env:"DATABASE_DSN"`
 
 	// Key contains JWT signing key (min 32 bytes recommended)
-	Key string `env:"JWT_KEY"`
+	Key string `json:"jwt_key" env:"JWT_KEY"`
 
 	// LogLevel sets logging verbosity (debug|info|warn|error)
-	LogLevel string `env:"LOG_LEVEL"`
+	LogLevel string `json:"log_level" env:"LOG_LEVEL"`
 
 	// StorageType is derived from other parameters (memory|file|db)
-	StorageType string `env:"-"`
+	StorageType string `json:"-" env:"-"`
 
 	// Timeout defines default network operation timeout
-	Timeout time.Duration `env:"TIMEOUT_DUR"`
+	Timeout time.Duration `json:"timeout_dur" env:"TIMEOUT_DUR"`
+
+	// HTTPS flag
+	EnableHTTPS bool `json:"enable_https" env:"ENABLE_HTTPS"`
 }
 
 // ConfigBuilder implements builder pattern for Cfg.
@@ -73,19 +84,71 @@ func NewConfigBuilder() *ConfigBuilder {
 	}
 }
 
+// WithConfigFile load configuration values from specified file.
+func (b *ConfigBuilder) WithConfigFile() *ConfigBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	var cfgFile = CfgFile{}
+	preFs := flag.NewFlagSet("file-config", flag.ContinueOnError)
+	preFs.ParseErrorsWhitelist.UnknownFlags = true
+
+	preFs.StringVarP(&cfgFile.CfgFileName, "config", "c", "", "Path to config file")
+
+	err := preFs.Parse(os.Args[1:])
+	if err != nil {
+		b.cfg = nil
+		b.err = err
+		return b
+	}
+
+	err = env.Parse(&cfgFile)
+	if err != nil {
+		b.cfg = nil
+		b.err = err
+		return b
+	}
+
+	if cfgFile.CfgFileName != "" {
+		err = getCfgFromFile(cfgFile.CfgFileName, b.cfg)
+		if err != nil {
+			b.cfg = nil
+			b.err = err
+			return b
+		}
+	}
+
+	return b
+}
+
+func getCfgFromFile(fname string, cfg *Cfg) error {
+	data, err := os.ReadFile(fname)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(data, cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // WithFlagParsing parses command-line flags into configuration.
 func (b *ConfigBuilder) WithFlagParsing() *ConfigBuilder {
 	if b.err != nil {
 		return b
 	}
 
-	flag.StringVar(&b.cfg.ServerAddr, "a", b.cfg.ServerAddr, "Address and port to start the server")
-	flag.StringVar(&b.cfg.ShortBaseAddr, "b", b.cfg.ShortBaseAddr, "Base address and port for short URL")
-	flag.StringVar(&b.cfg.StorageFilePath, "f", b.cfg.StorageFilePath, "URL storage file path")
-	flag.StringVar(&b.cfg.DatabaseDsn, "d", b.cfg.DatabaseDsn, "Database connection address")
-	flag.DurationVar(&b.cfg.Timeout, "t", b.cfg.Timeout, "Timeout duration in seconds")
-	flag.StringVar(&b.cfg.Key, "k", b.cfg.Key, "Key for jwt autorization")
-	flag.StringVar(&b.cfg.LogLevel, "l", b.cfg.LogLevel, "Logger level")
+	flag.StringVarP(&b.cfg.ServerAddr, "a", "a", b.cfg.ServerAddr, "Address and port to start the server")
+	flag.StringVarP(&b.cfg.ShortBaseAddr, "b", "b", b.cfg.ShortBaseAddr, "Base address and port for short URL")
+	flag.StringVarP(&b.cfg.StorageFilePath, "f", "f", b.cfg.StorageFilePath, "URL storage file path")
+	flag.StringVarP(&b.cfg.DatabaseDsn, "d", "d", b.cfg.DatabaseDsn, "Database connection address")
+	flag.DurationVarP(&b.cfg.Timeout, "t", "t", b.cfg.Timeout, "Timeout duration in seconds")
+	flag.StringVarP(&b.cfg.Key, "k", "k", b.cfg.Key, "Key for jwt autorization")
+	flag.StringVarP(&b.cfg.LogLevel, "l", "l", b.cfg.LogLevel, "Logger level")
+	flag.BoolVarP(&b.cfg.EnableHTTPS, "s", "s", b.cfg.EnableHTTPS, "Enable HTTPS flag")
 	flag.Parse()
 
 	return b

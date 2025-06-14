@@ -47,8 +47,12 @@ func (p *DeletionProcessor) Shutdown() {
 // Run starts the background processing loop.
 //
 // The processor will handle requests until Shutdown() is called.
-func (p *DeletionProcessor) Run(period time.Duration, timeout time.Duration) {
+func (p *DeletionProcessor) Run(period time.Duration, timeout time.Duration) chan struct{} {
+	doneCh := make(chan struct{})
+
 	go func() {
+		defer close(doneCh)
+
 		inChan := fanIn(p.ctx, p.delChans)
 
 		tick := time.NewTicker(period)
@@ -78,6 +82,8 @@ func (p *DeletionProcessor) Run(period time.Duration, timeout time.Duration) {
 			}
 		}
 	}()
+
+	return doneCh
 }
 
 // AddURLsIntoDeletionQueue enqueues URLs for deletion.
