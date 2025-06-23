@@ -59,6 +59,16 @@ func TestAppMemStorage_AddURLPair(t *testing.T) {
 		err := strg.AddURLPair(context.Background(), &pair)
 		assert.ErrorIs(t, err, errConflict)
 	})
+
+	t.Run("conflict #2", func(t *testing.T) {
+		pair := models.URLPair{
+			UID:   testOtherUserID,
+			Short: testShortURL,
+			Orig:  testOrigURL,
+		}
+		err := strg.AddURLPair(context.Background(), &pair)
+		assert.ErrorIs(t, err, errConflict)
+	})
 }
 
 func BenchmarkAppMemStorage_AddURLPair(b *testing.B) {
@@ -429,5 +439,22 @@ func BenchmarkAppMemStorage_Ping(b *testing.B) {
 			err := storage.Ping(context.Background())
 			require.NoError(b, err)
 		}
+	})
+}
+
+func TestAppMemStorage_GetStat(t *testing.T) {
+	strg := NewAppMemStorage()
+
+	umap := make(map[models.ShortURL]models.OrigURL)
+	umap[testShortURL] = testOrigURL
+	strg.pairs[testUserID] = umap
+
+	users := 1
+	urls := 1
+
+	t.Run("valid test", func(t *testing.T) {
+		stat := strg.GetStat()
+		assert.Equal(t, urls, stat.URLs)
+		assert.Equal(t, users, stat.Users)
 	})
 }

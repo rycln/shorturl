@@ -8,6 +8,7 @@ import (
 
 const (
 	testUserID       models.UserID   = "1"
+	testOtherUserID  models.UserID   = "2"
 	testShortURL     models.ShortURL = "abc123"
 	testDeletedShort models.ShortURL = "321cba"
 	testOrigURL      models.OrigURL  = "https://practicum.yandex.ru/"
