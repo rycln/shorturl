@@ -718,3 +718,45 @@ func BenchmarkFileStorage_Ping(b *testing.B) {
 		}
 	})
 }
+
+func TestFileStorage_GetStats(t *testing.T) {
+	strg, err := NewFileStorage(testFileName)
+	require.NoError(t, err)
+	defer func() {
+		err = os.Remove(strg.strgFileName)
+		require.NoError(t, err)
+	}()
+	defer func() {
+		err = os.Remove(strg.delFileName)
+		require.NoError(t, err)
+	}()
+
+	file, err := os.OpenFile(strg.strgFileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	require.NoError(t, err)
+	defer func() {
+		err = file.Close()
+		require.NoError(t, err)
+	}()
+
+	enc := json.NewEncoder(file)
+	require.NoError(t, err)
+	err = enc.Encode(&testPair)
+	require.NoError(t, err)
+
+	users := 1
+	urls := 1
+
+	t.Run("valid test", func(t *testing.T) {
+		stat, err := strg.GetStats(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, urls, stat.URLs)
+		assert.Equal(t, users, stat.Users)
+	})
+
+	t.Run("canceled ctx", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := strg.GetStats(ctx)
+		assert.Error(t, err)
+	})
+}

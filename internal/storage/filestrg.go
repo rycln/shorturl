@@ -111,6 +111,16 @@ func (s *FileStorage) DeleteRequestedURLs(ctx context.Context, delurls []*models
 	return nil
 }
 
+// GetStats retrieves and calculates service statistics from file storage.
+func (s *FileStorage) GetStats(ctx context.Context) (*models.Stats, error) {
+	stats, err := s.getStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
 // Ping is a no-op health check that always succeeds for file storage.
 // Exists to satisfy storage interface requirements.
 func (s *FileStorage) Ping(context.Context) error { return nil }
