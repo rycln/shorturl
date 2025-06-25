@@ -453,8 +453,16 @@ func TestAppMemStorage_GetStat(t *testing.T) {
 	urls := 1
 
 	t.Run("valid test", func(t *testing.T) {
-		stat := strg.GetStat()
+		stat, err := strg.GetStats(context.Background())
+		assert.NoError(t, err)
 		assert.Equal(t, urls, stat.URLs)
 		assert.Equal(t, users, stat.Users)
+	})
+
+	t.Run("canceled ctx", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := strg.GetStats(ctx)
+		assert.Error(t, err)
 	})
 }
