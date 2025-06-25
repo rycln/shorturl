@@ -29,3 +29,10 @@ const sqlDeleteRequestedURLs = `
 	SET is_deleted = TRUE 
 	WHERE short_url = $1
 `
+
+const sqlGetStats = `
+SELECT 
+	(SELECT COUNT(*) FROM urls) AS total_urls,
+    (SELECT COUNT(*) FROM users) AS total_users;
+
+`

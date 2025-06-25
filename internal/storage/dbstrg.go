@@ -155,6 +155,20 @@ func (s *DatabaseStorage) DeleteRequestedURLs(ctx context.Context, delurls []*mo
 	return tx.Commit()
 }
 
+// GetStats retrieves and calculates service statistics from db storage.
+func (s *DatabaseStorage) GetStats(ctx context.Context) (*models.Stats, error) {
+	row := s.db.QueryRowContext(ctx, sqlGetStats)
+
+	var stats = models.Stats{}
+
+	err := row.Scan(&stats.URLs, &stats.Users)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
+}
+
 // Ping verifies database connectivity.
 func (s *DatabaseStorage) Ping(ctx context.Context) error {
 	if err := s.db.PingContext(ctx); err != nil {

@@ -111,7 +111,7 @@ func TestDatabaseStorage_GetURLPairByShort(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("valid test", func(t *testing.T) {
+	t.Run("deleted url", func(t *testing.T) {
 		rows := mock.NewRows([]string{"user_id", "original_url", "is_deleted"}).AddRow(testPair.UID, testPair.Orig, true)
 		mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
 
@@ -329,6 +329,48 @@ func TestDatabaseStorage_Ping(t *testing.T) {
 		mock.ExpectPing().WillReturnError(errTest)
 
 		err := strg.Ping(context.Background())
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestDatabaseStorage_GetStats(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+
+	defer func() {
+		mock.ExpectClose()
+
+		err = db.Close()
+		require.NoError(t, err)
+
+		err = mock.ExpectationsWereMet()
+		require.NoError(t, err)
+	}()
+
+	strg := NewDatabaseStorage(db)
+
+	expectedQuery := regexp.QuoteMeta(sqlGetStats)
+
+	urls := 1
+	users := 1
+
+	t.Run("valid test", func(t *testing.T) {
+		rows := mock.NewRows([]string{"total_urls", "total_users"}).AddRow(urls, users)
+		mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+
+		stat, err := strg.GetStats(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, urls, stat.URLs)
+		assert.Equal(t, users, stat.Users)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("ctx expired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := strg.GetStats(ctx)
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
