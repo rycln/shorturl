@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestTrustedSubnetMiddleware(t *testing.T) {
@@ -11,8 +13,8 @@ func TestTrustedSubnetMiddleware(t *testing.T) {
 		name           string
 		trustedSubnet  string
 		xRealIP        string
-		expectedStatus int
 		expectedBody   string
+		expectedStatus int
 	}{
 		{
 			name:           "No trusted subnet configured",
@@ -62,7 +64,8 @@ func TestTrustedSubnetMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("OK"))
+				_, err := w.Write([]byte("OK"))
+				require.NoError(t, err)
 			})
 
 			middleware := TrustedSubnet(tt.trustedSubnet)
