@@ -55,6 +55,9 @@ type Cfg struct {
 	// LogLevel sets logging verbosity (debug|info|warn|error)
 	LogLevel string `json:"log_level" env:"LOG_LEVEL"`
 
+	// TrustedSubnet is classless Inter-Domain Routing (CIDR) string representation
+	TrustedSubnet string `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
+
 	// StorageType is derived from other parameters (memory|file|db)
 	StorageType string `json:"-" env:"-"`
 
@@ -145,9 +148,10 @@ func (b *ConfigBuilder) WithFlagParsing() *ConfigBuilder {
 	flag.StringVarP(&b.cfg.ShortBaseAddr, "b", "b", b.cfg.ShortBaseAddr, "Base address and port for short URL")
 	flag.StringVarP(&b.cfg.StorageFilePath, "f", "f", b.cfg.StorageFilePath, "URL storage file path")
 	flag.StringVarP(&b.cfg.DatabaseDsn, "d", "d", b.cfg.DatabaseDsn, "Database connection address")
-	flag.DurationVarP(&b.cfg.Timeout, "t", "t", b.cfg.Timeout, "Timeout duration in seconds")
+	flag.DurationVarP(&b.cfg.Timeout, "o", "o", b.cfg.Timeout, "Timeout duration in seconds")
 	flag.StringVarP(&b.cfg.Key, "k", "k", b.cfg.Key, "Key for jwt autorization")
 	flag.StringVarP(&b.cfg.LogLevel, "l", "l", b.cfg.LogLevel, "Logger level")
+	flag.StringVarP(&b.cfg.TrustedSubnet, "t", "t", b.cfg.TrustedSubnet, "CIDR")
 	flag.BoolVarP(&b.cfg.EnableHTTPS, "s", "s", b.cfg.EnableHTTPS, "Enable HTTPS flag")
 	flag.Parse()
 

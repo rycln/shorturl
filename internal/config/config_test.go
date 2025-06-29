@@ -11,14 +11,15 @@ import (
 )
 
 const (
-	testServerAddr  = ":8081"
-	testBaseAddr    = "http://test/"
-	testFilePath    = "urls"
-	testDatabaseDsn = "test_dsn"
-	testTimeout     = time.Duration(3) * time.Minute
-	testKey         = "secret_key"
-	testLoggerLevel = "info"
-	testCfgFileName = "testcfg.json"
+	testServerAddr    = ":8081"
+	testBaseAddr      = "http://test/"
+	testFilePath      = "urls"
+	testDatabaseDsn   = "test_dsn"
+	testTimeout       = time.Duration(3) * time.Minute
+	testKey           = "secret_key"
+	testLoggerLevel   = "info"
+	testCfgFileName   = "testcfg.json"
+	testTrustedSubnet = "192.168.1.0/24"
 )
 
 func TestConfigBuilder_WithEnvParsing(t *testing.T) {
@@ -30,6 +31,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 		Timeout:         testTimeout,
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
+		TrustedSubnet:   testTrustedSubnet,
 		StorageType:     "db",
 		EnableHTTPS:     true,
 	}
@@ -41,6 +43,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 	t.Setenv("TIMEOUT_DUR", testCfg.Timeout.String())
 	t.Setenv("JWT_KEY", testCfg.Key)
 	t.Setenv("LOG_LEVEL", testCfg.LogLevel)
+	t.Setenv("TRUSTED_SUBNET", testTrustedSubnet)
 	t.Setenv("ENABLE_HTTPS", "true")
 
 	t.Run("valid test", func(t *testing.T) {
@@ -76,6 +79,7 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 		Timeout:         testTimeout,
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
+		TrustedSubnet:   testTrustedSubnet,
 		StorageType:     "db",
 		EnableHTTPS:     true,
 	}
@@ -87,9 +91,10 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 			"-b=" + testCfg.ShortBaseAddr,
 			"-f=" + testCfg.StorageFilePath,
 			"-d=" + testCfg.DatabaseDsn,
-			"-t=" + testCfg.Timeout.String(),
+			"-o=" + testCfg.Timeout.String(),
 			"-k=" + testCfg.Key,
 			"-l=" + testCfg.LogLevel,
+			"-t=" + testTrustedSubnet,
 			"-s",
 		}
 
@@ -136,6 +141,7 @@ func TestConfigBuilder_WithConfigFile(t *testing.T) {
 		Timeout:         testTimeout,
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
+		TrustedSubnet:   testTrustedSubnet,
 		StorageType:     "db",
 		EnableHTTPS:     true,
 	}
