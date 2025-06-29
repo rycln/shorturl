@@ -137,15 +137,16 @@ func New() (*App, error) {
 				r.Use(middleware.TrustedSubnet(cfg.TrustedSubnet))
 				r.Get("/stats", statsHandler.ServeHTTP)
 			})
-
-			r.Use(authMiddleware.JWT)
-			r.Route("/shorten", func(r chi.Router) {
-				r.Post("/batch", shortenBatchHandler.ServeHTTP)
-				r.Post("/", apiShortenHandler.ServeHTTP)
-			})
-			r.Route("/user/urls", func(r chi.Router) {
-				r.Get("/", retrieveBatchHandler.ServeHTTP)
-				r.Delete("/", deleteBatchHandler.ServeHTTP)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.JWT)
+				r.Route("/shorten", func(r chi.Router) {
+					r.Post("/batch", shortenBatchHandler.ServeHTTP)
+					r.Post("/", apiShortenHandler.ServeHTTP)
+				})
+				r.Route("/user/urls", func(r chi.Router) {
+					r.Get("/", retrieveBatchHandler.ServeHTTP)
+					r.Delete("/", deleteBatchHandler.ServeHTTP)
+				})
 			})
 		})
 		r.With(authMiddleware.JWT).Post("/", shortenHandler.ServeHTTP)
