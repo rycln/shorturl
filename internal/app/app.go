@@ -108,6 +108,7 @@ func New() (*App, error) {
 	pingService := services.NewPing(strg)
 	authService := services.NewAuth(cfg.Key, jwtExpires)
 	deleteBatchService := services.NewBatchDeleter(strg)
+	statsService := services.NewStatsCollector(strg)
 
 	worker := worker.NewDeletionProcessor(deleteBatchService)
 
@@ -118,6 +119,7 @@ func New() (*App, error) {
 	retrieveBatchHandler := handlers.NewRetrieveBatchHandler(batchShortenerService, authService, cfg.ShortBaseAddr)
 	pingHandler := handlers.NewPingHandler(pingService)
 	deleteBatchHandler := handlers.NewDeleteBatchHandler(worker, authService)
+	statsHandler := handlers.NewStatsHandler(statsService)
 
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
@@ -131,6 +133,11 @@ func New() (*App, error) {
 		r.Use(middleware.Compress)
 
 		r.Route("/api", func(r chi.Router) {
+			r.Route("/internal", func(r chi.Router) {
+				r.Use(middleware.TrustedSubnet(cfg.TrustedSubnet))
+				r.Get("/stats", statsHandler.ServeHTTP)
+			})
+
 			r.Use(authMiddleware.JWT)
 			r.Route("/shorten", func(r chi.Router) {
 				r.Post("/batch", shortenBatchHandler.ServeHTTP)
