@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -17,14 +18,20 @@ import (
 
 	chimiddleware "github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	pb "github.com/rycln/shorturl/api/gen/shortener"
 	"github.com/rycln/shorturl/internal/config"
 	"github.com/rycln/shorturl/internal/contextkeys"
+	"github.com/rycln/shorturl/internal/grpc/interceptors"
+	"github.com/rycln/shorturl/internal/grpc/server"
 	"github.com/rycln/shorturl/internal/handlers"
 	"github.com/rycln/shorturl/internal/logger"
 	"github.com/rycln/shorturl/internal/middleware"
 	"github.com/rycln/shorturl/internal/services"
 	"github.com/rycln/shorturl/internal/storage"
 	"github.com/rycln/shorturl/internal/worker"
+	"google.golang.org/grpc"
 )
 
 // buildInfo holds application build metadata that can be set during compilation.
@@ -54,6 +61,7 @@ const (
 //
 // The struct combines all main components and manages their lifecycle:
 // - HTTP server
+// - gRPC server
 // - Background workers
 // - Configuration
 // - Storage
@@ -61,10 +69,11 @@ const (
 // Should be created once during application startup using New()
 // and managed as a single unit.
 type App struct {
-	server  *http.Server
-	storage storage.Storage
-	worker  *worker.DeletionProcessor
-	cfg     *config.Cfg
+	httpserver *http.Server
+	grpcserver *grpc.Server
+	storage    storage.Storage
+	worker     *worker.DeletionProcessor
+	cfg        *config.Cfg
 }
 
 // New constructs and initializes the complete application.
@@ -73,7 +82,8 @@ type App struct {
 // 1. Creates all storage layers
 // 2. Initializes services
 // 3. Configures HTTP routing
-// 4. Prepares background workers
+// 4. Configures gRPC server
+// 5. Prepares background workers
 //
 // Returns error if any component fails to initialize.
 func New() (*App, error) {
@@ -178,33 +188,67 @@ func New() (*App, error) {
 		Handler: r,
 	}
 
+	g := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			logging.UnaryServerInterceptor(interceptors.InterceptorLogger(logger.Log)),
+			auth.UnaryServerInterceptor(interceptors.NewAuthInterceptor(authService).Auth),
+		),
+	)
+
+	gs := server.NewShortenerServer(
+		shortenerService,
+		batchShortenerService,
+		shortenerService,
+		batchShortenerService,
+		worker,
+		authService,
+		pingService,
+		statsService,
+		cfg.ShortBaseAddr,
+		cfg.TrustedSubnet,
+	)
+
+	pb.RegisterShortenerServiceServer(g, gs)
+
 	return &App{
-		server:  s,
-		storage: strg,
-		worker:  worker,
-		cfg:     cfg,
+		httpserver: s,
+		grpcserver: g,
+		storage:    strg,
+		worker:     worker,
+		cfg:        cfg,
 	}, nil
 }
 
 // Run starts the application services.
 //
 // Launches:
-// - HTTP server (blocking call)
+// - HTTP server
+// - gRPC server
 // - Background deletion processor
 func (app *App) Run() error {
 	doneCh := app.worker.Run(tickerPeriod, app.cfg.Timeout)
 
 	go func() {
 		if app.cfg.EnableHTTPS {
-			err := app.server.ListenAndServeTLS("cert.pem", "key.pem")
+			err := app.httpserver.ListenAndServeTLS("cert.pem", "key.pem")
 			if err != nil && err != http.ErrServerClosed {
 				log.Fatalf("Server error: %v", err)
 			}
 		} else {
-			err := app.server.ListenAndServe()
+			err := app.httpserver.ListenAndServe()
 			if err != nil && err != http.ErrServerClosed {
 				log.Fatalf("Server error: %v", err)
 			}
+		}
+	}()
+
+	go func() {
+		listen, err := net.Listen("tcp", app.cfg.GRPCPort)
+		if err != nil {
+			log.Fatalf("gRPC server error: %v", err)
+		}
+		if err := app.grpcserver.Serve(listen); err != nil {
+			log.Fatalf("gRPC server error: %v", err)
 		}
 	}()
 
@@ -237,12 +281,15 @@ func (app *App) Run() error {
 // shutdown gracefully shuts down the application components.
 // It performs the following steps in order:
 //  1. Shuts down the HTTP server with the given context
-//  2. Shuts down the worker component
-//  3. Waits for either worker completion (doneCh) or context timeout
+//  2. Shuts down the gRPC server
+//  3. Shuts down the worker component
+//  4. Waits for either worker completion (doneCh) or context timeout
 func (app *App) shutdown(ctx context.Context, doneCh <-chan struct{}) error {
-	if err := app.server.Shutdown(ctx); err != nil {
+	if err := app.httpserver.Shutdown(ctx); err != nil {
 		return err
 	}
+
+	app.grpcserver.GracefulStop()
 
 	app.worker.Shutdown()
 
