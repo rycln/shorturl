@@ -20,6 +20,7 @@ const (
 	testLoggerLevel   = "info"
 	testCfgFileName   = "testcfg.json"
 	testTrustedSubnet = "192.168.1.0/24"
+	testGRPCPort      = ":50052"
 )
 
 func TestConfigBuilder_WithEnvParsing(t *testing.T) {
@@ -32,6 +33,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
 		TrustedSubnet:   testTrustedSubnet,
+		GRPCPort:        testGRPCPort,
 		StorageType:     "db",
 		EnableHTTPS:     true,
 	}
@@ -44,6 +46,7 @@ func TestConfigBuilder_WithEnvParsing(t *testing.T) {
 	t.Setenv("JWT_KEY", testCfg.Key)
 	t.Setenv("LOG_LEVEL", testCfg.LogLevel)
 	t.Setenv("TRUSTED_SUBNET", testTrustedSubnet)
+	t.Setenv("GRPC_PORT", testGRPCPort)
 	t.Setenv("ENABLE_HTTPS", "true")
 
 	t.Run("valid test", func(t *testing.T) {
@@ -80,6 +83,7 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
 		TrustedSubnet:   testTrustedSubnet,
+		GRPCPort:        testGRPCPort,
 		StorageType:     "db",
 		EnableHTTPS:     true,
 	}
@@ -95,6 +99,7 @@ func TestConfigBuilder_WithFlagParsing(t *testing.T) {
 			"-k=" + testCfg.Key,
 			"-l=" + testCfg.LogLevel,
 			"-t=" + testTrustedSubnet,
+			"-g=" + testGRPCPort,
 			"-s",
 		}
 
@@ -142,6 +147,7 @@ func TestConfigBuilder_WithConfigFile(t *testing.T) {
 		Key:             testKey,
 		LogLevel:        testLoggerLevel,
 		TrustedSubnet:   testTrustedSubnet,
+		GRPCPort:        testGRPCPort,
 		StorageType:     "db",
 		EnableHTTPS:     true,
 	}
