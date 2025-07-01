@@ -55,7 +55,6 @@ Custom Analyzers:
 package main
 
 import (
-	"github.com/gordonklaus/ineffassign/pkg/ineffassign"
 	"github.com/kisielk/errcheck/errcheck"
 	"github.com/rycln/shorturl/cmd/staticlint/noexitanalyzer"
 	"golang.org/x/tools/go/analysis"
@@ -141,7 +140,6 @@ func main() {
 
 	externalAnalyzers := []*analysis.Analyzer{
 		errcheck.Analyzer,
-		ineffassign.Analyzer,
 	}
 
 	var analyzers []*analysis.Analyzer

@@ -75,7 +75,10 @@ func (i *AuthInterceptor) Auth(ctx context.Context) (context.Context, error) {
 		}
 
 		header := metadata.Pairs("authorization", "Bearer "+jwtString)
-		grpc.SetHeader(ctx, header)
+		err = grpc.SetHeader(ctx, header)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "can't write the header")
+		}
 	}
 
 	return context.WithValue(ctx, contextkeys.UserID, userID), nil
