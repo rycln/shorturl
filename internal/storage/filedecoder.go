@@ -141,3 +141,47 @@ func (s *FileStorage) shortIsDeleted(ctx context.Context, short models.ShortURL)
 		}
 	}
 }
+
+func (s *FileStorage) getStats(ctx context.Context) (stats *models.Stats, err error) {
+	s.strgMu.Lock()
+	defer s.strgMu.Unlock()
+
+	fd, err := newFileDecoder(s.strgFileName)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if decCloseErr := fd.close(); decCloseErr != nil {
+			err = fmt.Errorf("%v; decoder close failed: %w", err, decCloseErr)
+		}
+	}()
+
+	stats = &models.Stats{}
+
+	var uids = make(map[models.UserID]struct{})
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		pair := &models.URLPair{}
+		err = fd.Decode(pair)
+		if err == io.EOF {
+			stats.Users = len(uids)
+			return stats, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		_, ok := uids[pair.UID]
+		if !ok {
+			uids[pair.UID] = struct{}{}
+		}
+
+		stats.URLs++
+	}
+}

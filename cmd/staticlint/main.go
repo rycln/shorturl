@@ -69,7 +69,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/composite"
 	"golang.org/x/tools/go/analysis/passes/copylock"
 	"golang.org/x/tools/go/analysis/passes/errorsas"
-	"golang.org/x/tools/go/analysis/passes/fieldalignment"
 	"golang.org/x/tools/go/analysis/passes/httpresponse"
 	"golang.org/x/tools/go/analysis/passes/loopclosure"
 	"golang.org/x/tools/go/analysis/passes/lostcancel"
@@ -100,7 +99,6 @@ func main() {
 		composite.Analyzer,
 		copylock.Analyzer,
 		errorsas.Analyzer,
-		fieldalignment.Analyzer,
 		httpresponse.Analyzer,
 		loopclosure.Analyzer,
 		lostcancel.Analyzer,

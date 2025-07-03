@@ -163,6 +163,31 @@ func (s *AppMemStorage) DeleteRequestedURLs(ctx context.Context, delurls []*mode
 	return nil
 }
 
+// GetStats retrieves and calculates service statistics from memory storage.
+func (s *AppMemStorage) GetStats(ctx context.Context) (*models.Stats, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var urls, users int
+
+	users = len(s.pairs)
+
+	for _, userURLs := range s.pairs {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		urls += len(userURLs)
+	}
+
+	return &models.Stats{
+		URLs:  urls,
+		Users: users,
+	}, nil
+}
+
 // Ping is a no-op health check that always succeeds for in-memory storage.
 // Exists to satisfy storage interface requirements.
 func (s *AppMemStorage) Ping(context.Context) error { return nil }

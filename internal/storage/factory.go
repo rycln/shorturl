@@ -14,6 +14,7 @@ type Storage interface {
 	service.BatchShortenerStorage
 	service.PingStorage
 	service.BatchDeleterStorage
+	service.StatsStorage
 	Close() error
 }
 
